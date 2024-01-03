@@ -187,9 +187,11 @@ dependencies = [
 name = "storage"
 version = "0.1.0"
 dependencies = [
+ "aead",
  "chacha20",
  "chacha20poly1305",
  "crypto",
+ "crypto-common",
  "hex",
  "hex-literal",
  "rand",
