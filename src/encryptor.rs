@@ -23,7 +23,7 @@ pub type Key = TKey<Crypto>;
 pub type Nonce = TNonce<Crypto>;
 pub type Tag = TTag<Crypto>;
 
-const CHUNK_SIZE: usize = 100 * 1024;
+const CHUNK_SIZE: usize = 1024 * 1024;
 
 pub struct EncryptedChunker<T> where T: Read {
     source: T,
@@ -44,8 +44,8 @@ impl<T> EncryptedChunker<T> where T: Read {
 impl<T> Iterator for EncryptedChunker<T> where T: Read {
     type Item = Result<Vec<u8>>;
     fn next(&mut self) -> Option<Self::Item> {
-        let mut buffer = [0; CHUNK_SIZE];
-        let res = self.source.read(&mut buffer);
+        let mut buffer = Vec::with_capacity(CHUNK_SIZE);
+        let res = self.source.by_ref().take(CHUNK_SIZE as u64).read_to_end(&mut buffer);
         let ret = match res {
             Ok(count) => {
                 if count > 0 {
