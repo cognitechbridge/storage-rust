@@ -12,16 +12,20 @@ use std::io::{self, Read};
 fn main() {
     println!("Hello, world!");
 
-    let files_bytes= read_file_to_vec("D:\\File.rtf");
-    let bytes = match files_bytes {
-        Ok(val) => val,
-        Err(e) => {
-            panic!("Error occurred: {:?}", e)
-        }
-    };
+    let bytes= read_file_to_vec("D:\\File.rtf").unwrap();
+
 
     let key = ChaCha20Poly1305::generate_key(&mut OsRng);
-    let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
+    let mut nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
+    println!("{:x?}", &nonce);
+    encryptor::increase_bytes_le(&mut nonce);
+    println!("{:x?}", &nonce);
+
+    let enc = encryptor::EncryptedChunker::new(
+        File::open("D:\\File.rtf").unwrap(),
+        key,
+        nonce
+    );
 
 
     let mut cyphered = encryptor::encrypt(bytes, &key, &nonce).unwrap();
