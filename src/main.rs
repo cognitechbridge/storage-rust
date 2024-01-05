@@ -7,7 +7,7 @@ use chacha20poly1305::{
 };
 
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, BufWriter, Read, Write};
 
 fn main() {
     println!("Hello, world!");
@@ -17,9 +17,6 @@ fn main() {
 
     let key = ChaCha20Poly1305::generate_key(&mut OsRng);
     let mut nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
-    println!("{:x?}", &nonce);
-    encryptor::increase_bytes_le(&mut nonce);
-    println!("{:x?}", &nonce);
 
     let enc = encryptor::EncryptedChunker::new(
         File::open("D:\\File.rtf").unwrap(),
@@ -27,6 +24,10 @@ fn main() {
         nonce
     );
 
+    let file = File::create("D:\\File2.rtf").unwrap();
+    let mut writer = BufWriter::new(file);
+
+    encryptor::process_encrypted_data(enc.map(|x| x.unwrap()), &mut writer, nonce, key);
 
     let mut cyphered = encryptor::encrypt(bytes, &key, &nonce).unwrap();
     let re = encryptor::decrypt(cyphered, &key, &nonce).unwrap();
