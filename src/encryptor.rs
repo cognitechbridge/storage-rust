@@ -28,7 +28,7 @@ const CHUNK_SIZE: usize = 1024 * 1024;
 pub struct EncryptedChunker<T> where T: Read {
     source: T,
     key: Key,
-    nonce: Nonce
+    nonce_init: Nonce
 }
 
 impl<T> EncryptedChunker<T> where T: Read {
@@ -36,7 +36,7 @@ impl<T> EncryptedChunker<T> where T: Read {
         return Self {
             source,
             key,
-            nonce
+            nonce_init: nonce
         };
     }
 }
@@ -49,28 +49,28 @@ impl<T> Iterator for EncryptedChunker<T> where T: Read {
         let ret = match res {
             Ok(count) => {
                 if count > 0 {
-                    Some(encrypt(&buffer[..count].to_vec(), &self.key, &self.nonce))
+                    Some(encrypt(&buffer[..count].to_vec(), &self.key, &self.nonce_init))
                 } else {
                     None
                 }
             }
             Err(e) => None,
         };
-        increase_bytes_le(&mut self.nonce);
+        increase_bytes_le(&mut self.nonce_init);
         return ret;
     }
 }
 
-pub fn process_encrypted_data<W, I>(enc: I, writer: &mut W, nonce: Nonce, key:Key)
+pub fn process_encrypted_data<W, I>(enc: I, writer: &mut W, nonce_init: Nonce, key:Key)
     where
         W: std::io::Write,
         I: Iterator<Item = Vec<u8>>,
 {
-    let mut nonce_c = nonce.clone();
+    let mut nonce = nonce_init.clone();
     for encrypted_data in enc {
-        let decrypted_data = decrypt(&encrypted_data, &key, &nonce_c).unwrap();
+        let decrypted_data = decrypt(&encrypted_data, &key, &nonce).unwrap();
         writer.write_all(decrypted_data.as_slice()).unwrap();
-        increase_bytes_le(&mut nonce_c);
+        increase_bytes_le(&mut nonce);
     }
 }
 
