@@ -6,7 +6,7 @@ use aead::{
     Nonce as TNonce,
     Aead,
     KeyInit,
-    Tag as TTag
+    Tag as TTag,
 };
 
 use num_bigint::{BigUint};
@@ -14,7 +14,7 @@ use num_traits::{One};
 use generic_array::{ArrayLength, GenericArray};
 
 use std::fs::File;
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Write, Error};
 
 
 pub type Result<T> = core::result::Result<T, aead::Error>;
@@ -23,29 +23,33 @@ pub type Key = TKey<Crypto>;
 pub type Nonce = TNonce<Crypto>;
 pub type Tag = TTag<Crypto>;
 
-const CHUNK_SIZE: usize = 1024 * 1024;
-
-pub struct EncryptedChunker<T> where T: Read {
+pub struct EncryptedIterator<T> where T: Read {
     source: T,
     key: Key,
-    nonce_init: Nonce
+    nonce_init: Nonce,
+    chunk_size: usize
 }
 
-impl<T> EncryptedChunker<T> where T: Read {
-    pub fn new(source: T, key: Key, nonce: Nonce) -> Self {
-        return Self {
-            source,
+pub trait AsEncryptedIterator<T> where T: Read {
+    fn to_encrypted_iterator(self, key: Key, nonce: Nonce, chunk_size: usize) -> EncryptedIterator<T>;
+}
+
+impl<T: Read> AsEncryptedIterator<T> for T {
+    fn to_encrypted_iterator(self, key: Key, nonce: Nonce, chunk_size: usize) -> EncryptedIterator<T> {
+        return EncryptedIterator {
+            source: self,
             key,
-            nonce_init: nonce
+            nonce_init: nonce,
+            chunk_size
         };
     }
 }
 
-impl<T> Iterator for EncryptedChunker<T> where T: Read {
-    type Item = Result<Vec<u8>>;
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut buffer = Vec::with_capacity(CHUNK_SIZE);
-        let res = self.source.by_ref().take(CHUNK_SIZE as u64).read_to_end(&mut buffer);
+
+impl<T: Read> EncryptedIterator<T> {
+    pub fn read_bytes_encrypted(&mut self, size: usize) -> Option<Result<Vec<u8>>> {
+        let mut buffer = Vec::with_capacity(size);
+        let res = self.source.by_ref().take(size as u64).read_to_end(&mut buffer);
         let ret = match res {
             Ok(count) => {
                 if count > 0 {
@@ -61,20 +65,27 @@ impl<T> Iterator for EncryptedChunker<T> where T: Read {
     }
 }
 
-pub fn process_encrypted_data<W, I>(enc: I, writer: &mut W, nonce_init: Nonce, key:Key)
+impl<T> Iterator for EncryptedIterator<T> where T: Read {
+    type Item = Result<Vec<u8>>;
+    fn next(&mut self) -> Option<Self::Item> {
+        return self.read_bytes_encrypted(self.chunk_size);
+    }
+}
+
+pub fn process_encrypted_data<W, I>(enc: I, writer: &mut W, nonce_init: Nonce, key: Key)
     where
         W: std::io::Write,
-        I: Iterator<Item = Vec<u8>>,
+        I: Iterator<Item=Result<Vec<u8>>>,
 {
     let mut nonce = nonce_init.clone();
     for encrypted_data in enc {
-        let decrypted_data = decrypt(&encrypted_data, &key, &nonce).unwrap();
+        let decrypted_data = decrypt(&encrypted_data.unwrap(), &key, &nonce).unwrap();
         writer.write_all(decrypted_data.as_slice()).unwrap();
         increase_bytes_le(&mut nonce);
     }
 }
 
-pub fn increase_bytes_le<T>(nonce: &mut GenericArray<u8,T>) where T:ArrayLength<u8> {
+pub fn increase_bytes_le<T>(nonce: &mut GenericArray<u8, T>) where T: ArrayLength<u8> {
     let mut number = BigUint::from_bytes_le(nonce);
     number += BigUint::one();
     let new_bytes = number.to_bytes_le();
