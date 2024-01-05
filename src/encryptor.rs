@@ -5,23 +5,19 @@ use crypto_common::{
 use aead::{
     Nonce as TNonce,
     Aead,
-    KeyInit,
-    Tag as TTag,
+    KeyInit
 };
 
 use num_bigint::{BigUint};
 use num_traits::{One};
 use generic_array::{ArrayLength, GenericArray};
-
-use std::fs::File;
-use std::io::{self, Read, Write, Error};
+use std::io::{Read, Write};
 
 
 pub type Result<T> = core::result::Result<T, aead::Error>;
 type Crypto = chacha20poly1305::ChaCha20Poly1305;
 pub type Key = TKey<Crypto>;
 pub type Nonce = TNonce<Crypto>;
-pub type Tag = TTag<Crypto>;
 
 pub struct EncryptedIterator<T> where T: Read {
     source: T,
@@ -58,7 +54,7 @@ impl<T: Read> EncryptedIterator<T> {
                     None
                 }
             }
-            Err(e) => None,
+            Err(_e) => None,
         };
         increase_bytes_le(&mut self.nonce_init);
         return ret;
@@ -74,7 +70,7 @@ impl<T> Iterator for EncryptedIterator<T> where T: Read {
 
 pub fn process_encrypted_data<W, I>(enc: I, writer: &mut W, nonce_init: Nonce, key: Key)
     where
-        W: std::io::Write,
+        W: Write,
         I: Iterator<Item=Result<Vec<u8>>>,
 {
     let mut nonce = nonce_init.clone();
