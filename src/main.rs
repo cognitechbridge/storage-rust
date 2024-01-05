@@ -28,9 +28,6 @@ fn main() {
     let mut writer = BufWriter::new(file);
 
     encryptor::process_encrypted_data(enc.map(|x| x.unwrap()), &mut writer, nonce, key);
-
-    let mut cyphered = encryptor::encrypt(bytes, &key, &nonce).unwrap();
-    let re = encryptor::decrypt(cyphered, &key, &nonce).unwrap();
 }
 
 fn read_file_to_vec(filename: &str) -> io::Result<Vec<u8>> {

@@ -23,7 +23,7 @@ pub type Key = TKey<Crypto>;
 pub type Nonce = TNonce<Crypto>;
 pub type Tag = TTag<Crypto>;
 
-const CHUNK_SIZE: usize = 1024 * 1024;
+const CHUNK_SIZE: usize = 100 * 1024;
 
 pub struct EncryptedChunker<T> where T: Read {
     source: T,
@@ -49,7 +49,7 @@ impl<T> Iterator for EncryptedChunker<T> where T: Read {
         let ret = match res {
             Ok(count) => {
                 if count > 0 {
-                    Some(encrypt(buffer[..count].to_vec(), &self.key, &self.nonce))
+                    Some(encrypt(&buffer[..count].to_vec(), &self.key, &self.nonce))
                 } else {
                     None
                 }
@@ -68,7 +68,7 @@ pub fn process_encrypted_data<W, I>(enc: I, writer: &mut W, nonce: Nonce, key:Ke
 {
     let mut nonce_c = nonce.clone();
     for encrypted_data in enc {
-        let decrypted_data = decrypt(encrypted_data, &key, &nonce_c).unwrap();
+        let decrypted_data = decrypt(&encrypted_data, &key, &nonce_c).unwrap();
         writer.write_all(decrypted_data.as_slice()).unwrap();
         increase_bytes_le(&mut nonce_c);
     }
@@ -82,14 +82,14 @@ pub fn increase_bytes_le<T>(nonce: &mut GenericArray<u8,T>) where T:ArrayLength<
     nonce[..min_len].copy_from_slice(&new_bytes[..min_len]);
 }
 
-pub fn encrypt(plain: Vec<u8>, key: &Key, nonce: &Nonce) -> Result<Vec<u8>> {
+pub fn encrypt(plain: &Vec<u8>, key: &Key, nonce: &Nonce) -> Result<Vec<u8>> {
     let cipher = Crypto::new(&key);
     let cipher_result = cipher.encrypt(&nonce, plain.as_ref());
 
     return cipher_result;
 }
 
-pub fn decrypt(encrypted: Vec<u8>, key: &Key, nonce: &Nonce) -> Result<Vec<u8>> {
+pub fn decrypt(encrypted: &Vec<u8>, key: &Key, nonce: &Nonce) -> Result<Vec<u8>> {
     let cipher = Crypto::new(&key);
     let plain_result = cipher.decrypt(&nonce, encrypted.as_ref());
 
