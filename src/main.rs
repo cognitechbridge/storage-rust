@@ -1,5 +1,6 @@
 mod encryptor;
 mod s3_file_storage;
+mod encryptor_file_generator;
 
 
 use chacha20poly1305::{
@@ -8,8 +9,9 @@ use chacha20poly1305::{
 };
 
 use std::fs::File;
-use std::io::Write;
+use std::io::{Read, Write};
 use encryptor::AsEncryptedIterator;
+use crate::encryptor_file_generator::EncryptedFileGenerator;
 
 
 const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
@@ -18,8 +20,18 @@ const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 async fn main() {
     println!("Hello, world!");
 
-    let key = ChaCha20Poly1305::generate_key(&mut OsRng);
-    let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
+    // let key = ChaCha20Poly1305::generate_key(&mut OsRng);
+    // let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
+
+    let mut key = ChaCha20Poly1305::generate_key(&mut OsRng);
+    let mut nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per
+
+    for i in 0..key.len() {
+        key[i] = i as u8;
+    }
+    for i in 0..nonce.len() {
+        nonce[i] = i as u8;
+    }
 
     // let file = File::create("D:\\File2.rtf").unwrap();
     // let mut writer = BufWriter::new(file);
@@ -40,11 +52,22 @@ async fn main() {
     //         .expect("Error writing to file.");
     // }
 
-    let iterator = File::open("D:\\Sample.txt")
-        .unwrap()
-        .to_encrypted_iterator(key, nonce, CHUNK_SIZE as usize);
-    s3_file_storage::upload(iterator, "Hi2.txt".to_string()).await;
+    // let iterator = File::open("D:\\Sample.txt")
+    //     .unwrap()
+    //     .to_encrypted_iterator(key, nonce, CHUNK_SIZE as usize);
+    // s3_file_storage::upload(iterator, "Hi2.txt".to_string()).await;
 
-    // println!("{:x?}", &buffer);
+    let i = File::open("D:\\File.rtf").unwrap().to_encrypted_iterator(key, nonce, 100);
+    let mut x = EncryptedFileGenerator::new(i);
+    let mut buffer = [0u8;10];
+    loop {
+        match x.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(n) => {
+                println!("{:x?}", &buffer[..n])
+            },
+            Err(_e) => return, // Handle read error
+        }
+    }
 }
 

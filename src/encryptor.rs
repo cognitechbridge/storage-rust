@@ -23,7 +23,7 @@ pub struct EncryptedIterator<T> where T: Read {
     source: T,
     key: Key,
     nonce_init: Nonce,
-    chunk_size: usize
+    pub chunk_size: usize
 }
 
 pub trait AsEncryptedIterator<T> where T: Read {
