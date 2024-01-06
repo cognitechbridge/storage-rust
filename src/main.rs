@@ -52,22 +52,23 @@ async fn main() {
     //         .expect("Error writing to file.");
     // }
 
-    // let iterator = File::open("D:\\Sample.txt")
-    //     .unwrap()
-    //     .to_encrypted_iterator(key, nonce, CHUNK_SIZE as usize);
-    // s3_file_storage::upload(iterator, "Hi2.txt".to_string()).await;
+    let mut reader = File::open("D:\\Sample.txt")
+        .unwrap()
+        .to_encrypted_iterator(key, nonce, CHUNK_SIZE as usize)
+        .to_encrypted_file_generator();
+    s3_file_storage::upload(&mut reader, "Hi3.txt".to_string()).await;
 
-    let i = File::open("D:\\File.rtf").unwrap().to_encrypted_iterator(key, nonce, 100 * 1024);
-    let mut x = EncryptedFileGenerator::new(i);
-    let mut buffer = [0u8;110];
-    loop {
-        match x.read(&mut buffer) {
-            Ok(0) => break,
-            Ok(n) => {
-                println!("{:x?}", &buffer[..n])
-            },
-            Err(_e) => return, // Handle read error
-        }
-    }
+    // let i = File::open("D:\\File.rtf").unwrap().to_encrypted_iterator(key, nonce, 100 * 1024);
+    // let mut x = EncryptedFileGenerator::new(i);
+    // let mut buffer = [0u8;110];
+    // loop {
+    //     match x.read(&mut buffer) {
+    //         Ok(0) => break,
+    //         Ok(n) => {
+    //             println!("{:x?}", &buffer[..n])
+    //         },
+    //         Err(_e) => return, // Handle read error
+    //     }
+    // }
 }
 

@@ -1,5 +1,5 @@
 use std::io::{Read, Write};
-use crate::encryptor::EncryptedIterator;
+use crate::encryptor::{AsEncryptedIterator, EncryptedIterator, Key, Nonce};
 use num_bigint::{BigUint};
 
 const SEPARATOR_LENGTH: usize = 4;
@@ -42,6 +42,17 @@ impl<T> Read for EncryptedFileGenerator<T> where T: Read {
         buf[..len].copy_from_slice(&self.buffer[..len]);
         self.buffer.drain(..len);
         Ok(len)
+    }
+}
+
+impl<T: Read> EncryptedIterator<T> {
+    pub fn to_encrypted_file_generator(self) -> EncryptedFileGenerator<T> {
+        return EncryptedFileGenerator {
+            source: self,
+            buffer: vec![],
+            counter: 0,
+            chunk_size: 0,
+        };
     }
 }
 

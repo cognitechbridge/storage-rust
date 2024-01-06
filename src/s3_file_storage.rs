@@ -4,9 +4,14 @@ use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
 use aws_sdk_s3::Client as S3Client;
 use aws_smithy_types::byte_stream::ByteStream;
 use aws_config::BehaviorVersion;
-use crate::encryptor;
+use std::io::Read;
 
-pub async fn upload<I>(iterator: I, key: String) where I: Iterator<Item=encryptor::Result<Vec<u8>>>, {
+const CHUNK_SIZE: usize = 10 * 1024 * 1024;
+
+pub async fn upload<R>(reader: &mut R, key: String)
+    where
+        R: Read,
+{
     let region_provider = RegionProviderChain::default_provider();
     let config = aws_config::defaults(BehaviorVersion::latest())
         .region(region_provider)
@@ -27,19 +32,22 @@ pub async fn upload<I>(iterator: I, key: String) where I: Iterator<Item=encrypto
 
 
     let mut upload_parts: Vec<CompletedPart> = Vec::new();
+    let mut chunk_index = 1;
+    let mut buffer = vec![0; CHUNK_SIZE];
 
-    let mut chunk_index = 0;
-    for chunk in iterator {
-        let byte_stream = ByteStream::from(chunk.unwrap());
-        let part_number = (chunk_index as i32) + 1;
+    while let Ok(bytes_read) = reader.read(&mut buffer) {
+        if bytes_read == 0 {
+            break;
+        }
 
+        let byte_stream = ByteStream::from(buffer[..bytes_read].to_vec());
         let upload_part_res = client
             .upload_part()
             .key(&key)
             .bucket(bucket_name)
             .upload_id(upload_id)
             .body(byte_stream)
-            .part_number(part_number)
+            .part_number(chunk_index)
             .send()
             .await
             .unwrap();
@@ -47,7 +55,7 @@ pub async fn upload<I>(iterator: I, key: String) where I: Iterator<Item=encrypto
         upload_parts.push(
             CompletedPart::builder()
                 .e_tag(upload_part_res.e_tag.unwrap_or_default())
-                .part_number(part_number)
+                .part_number(chunk_index)
                 .build(),
         );
         chunk_index += 1;
