@@ -5,6 +5,7 @@ use aws_sdk_s3::{Client as S3Client};
 use aws_smithy_types::byte_stream::ByteStream;
 use aws_config::BehaviorVersion;
 use std::io::{Read, Write};
+use anyhow::{anyhow, Result};
 
 const CHUNK_SIZE: usize = 10 * 1024 * 1024;
 const BUCKET_NAME: &str = "ctb-test-2";
@@ -21,7 +22,7 @@ pub async fn client() -> S3Client {
     return client;
 }
 
-pub async fn upload<R>(reader: &mut R, key: String)
+pub async fn upload<R>(reader: &mut R, key: String) -> Result<()>
     where
         R: Read,
 {
@@ -33,9 +34,8 @@ pub async fn upload<R>(reader: &mut R, key: String)
         .bucket(bucket_name)
         .key(&key)
         .send()
-        .await
-        .unwrap();
-    let upload_id = multipart_upload_res.upload_id().unwrap();
+        .await?;
+    let upload_id = multipart_upload_res.upload_id().ok_or(anyhow!("S3 upload id not returned"))?;
 
 
     let mut upload_parts: Vec<CompletedPart> = Vec::new();
@@ -56,8 +56,7 @@ pub async fn upload<R>(reader: &mut R, key: String)
             .body(byte_stream)
             .part_number(chunk_index)
             .send()
-            .await
-            .unwrap();
+            .await?;
 
         upload_parts.push(
             CompletedPart::builder()
@@ -79,11 +78,11 @@ pub async fn upload<R>(reader: &mut R, key: String)
         .multipart_upload(completed_multipart_upload)
         .upload_id(upload_id)
         .send()
-        .await
-        .unwrap();
+        .await?;
+    return Ok(());
 }
 
-pub async fn download<W>(writer: &mut W, key: String) -> Result<usize, anyhow::Error>
+pub async fn download<W>(writer: &mut W, key: String) -> Result<usize>
     where
         W: Write,
 {

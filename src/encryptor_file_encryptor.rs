@@ -1,6 +1,7 @@
 use std::io::Read;
 use crate::encryptor::EncryptedIterator;
 use num_bigint::{BigUint};
+use crate::map_anyhow_io;
 
 const SEPARATOR_LENGTH: usize = 4;
 const HEADER_LENGTH: usize = 4;
@@ -18,7 +19,10 @@ impl<T> Read for EncryptedFileGenerator<T> where T: Read {
         while self.buffer.len() < buf.len() {
             match self.source.next() {
                 Some(result) => {
-                    let mut r = result.unwrap();
+                    let mut r = map_anyhow_io!(
+                        result,
+                        format!("Error encrypting chunk {}", self.counter + 1)
+                    )?;
                     if self.counter == 0 {
                         self.chunk_size = r.len();
                         let mut size = [0u8; HEADER_LENGTH];

@@ -12,9 +12,10 @@ use num_bigint::{BigUint};
 use num_traits::{One};
 use generic_array::{ArrayLength, GenericArray};
 use std::io::Read;
+use anyhow::{anyhow, bail};
 
 
-pub type Result<T> = core::result::Result<T, aead::Error>;
+pub type Result<T> = anyhow::Result<T>;
 type Crypto = chacha20poly1305::ChaCha20Poly1305;
 pub type Key = TKey<Crypto>;
 pub type Nonce = TNonce<Crypto>;
@@ -44,8 +45,8 @@ impl<T: Read> AsEncryptedIterator<T> for T {
 
 impl<T: Read> EncryptedIterator<T> {
     pub fn read_bytes_encrypted(&mut self, size: usize) -> Option<Result<Vec<u8>>> {
-        let mut buffer = Vec::with_capacity(size);
-        let res = self.source.by_ref().take(size as u64).read_to_end(&mut buffer);
+        let mut buffer = vec![0u8;size];
+        let res = self.source.read(&mut buffer);
         let ret = match res {
             Ok(count) => {
                 if count > 0 {
@@ -54,7 +55,7 @@ impl<T: Read> EncryptedIterator<T> {
                     None
                 }
             }
-            Err(_e) => None,
+            Err(e) => Some(Err(anyhow!(e))),
         };
         increase_bytes_le(&mut self.nonce_init);
         return ret;
@@ -78,13 +79,14 @@ pub fn increase_bytes_le<T>(nonce: &mut GenericArray<u8, T>) where T: ArrayLengt
 
 pub fn encrypt(plain: &Vec<u8>, key: &Key, nonce: &Nonce) -> Result<Vec<u8>> {
     let cipher = Crypto::new(&key);
-    let cipher_result = cipher.encrypt(&nonce, plain.as_ref());
-
-    return cipher_result;
+    let cipher_result = cipher.encrypt(&nonce, plain.as_ref())
+        .or_else(|_x| bail!("Encryption error"))?;
+    return Ok(cipher_result);
 }
 
 pub fn decrypt(encrypted: &Vec<u8>, key: &Key, nonce: &Nonce) -> Result<Vec<u8>> {
     let cipher = Crypto::new(&key);
-    let plain_result = cipher.decrypt(&nonce, encrypted.as_ref());
-    return plain_result;
+    let plain_result = cipher.decrypt(&nonce, encrypted.as_ref())
+        .or_else(|_x| bail!("Decryption error"))?;
+    return Ok(plain_result);
 }

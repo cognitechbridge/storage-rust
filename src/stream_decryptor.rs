@@ -1,7 +1,8 @@
 use std::io::Read;
+use anyhow::{anyhow, bail, Result};
 use num_bigint::{BigUint};
 use num_traits::ToPrimitive;
-use crate::encryptor;
+use crate::{encryptor, map_anyhow_io};
 use crate::encryptor::{Key, Nonce};
 
 pub struct ReaderDecryptor<T> where T: Read {
@@ -10,20 +11,22 @@ pub struct ReaderDecryptor<T> where T: Read {
     nonce: Nonce,
     buffer: Vec<u8>,
     chunk_size: usize,
+    chunk_counter: usize,
 }
 
 pub trait AsReaderDecryptor<T> where T: Read {
-    fn to_reader_decryptor(self, key:Key, nonce: Nonce) -> ReaderDecryptor<T>;
+    fn to_reader_decryptor(self, key: Key, nonce: Nonce) -> ReaderDecryptor<T>;
 }
 
 impl<T: Read> AsReaderDecryptor<T> for T {
-    fn to_reader_decryptor(self, key:Key, nonce: Nonce) -> ReaderDecryptor<T> {
+    fn to_reader_decryptor(self, key: Key, nonce: Nonce) -> ReaderDecryptor<T> {
         return ReaderDecryptor {
             source: self,
             key,
             nonce,
             buffer: vec![],
             chunk_size: 0,
+            chunk_counter: 0,
         };
     }
 }
@@ -31,24 +34,27 @@ impl<T: Read> AsReaderDecryptor<T> for T {
 impl<T> Read for ReaderDecryptor<T> where T: Read {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.chunk_size == 0 {
-            let mut small_buffer = [0u8; 4];
-            self.source.read(&mut small_buffer).unwrap();
-            self.chunk_size = BigUint::from_bytes_le(&mut small_buffer).to_u64().unwrap() as usize;
+            self.chunk_size = map_anyhow_io!(
+                read_chunk_size(&mut self.source),
+                "Error reading chunk size"
+            )?;
         }
         while self.buffer.len() < buf.len() {
-            let mut small_buffer = [0u8; 4];
-            self.source.read(&mut small_buffer).unwrap();
-
+            map_anyhow_io!(
+                read_chunk_header(&mut self.source),
+                "Error reading chunk header"
+            )?;
             let mut buffer = vec![0u8; self.chunk_size];
             let bytes_read = match self.source.read(&mut buffer) {
                 Ok(0) => break,
                 Ok(size) => size,
                 Err(_e) => 0,
             };
-            let mut decrypted_data = encryptor::decrypt(
-                &buffer[..bytes_read].to_vec(),
-                &self.key,
-                &self.nonce).unwrap();
+            self.chunk_counter += 1;
+            let mut decrypted_data = map_anyhow_io!(
+                encryptor::decrypt(&buffer[..bytes_read].to_vec(),&self.key,&self.nonce),
+                format!("Error decrypting chunk {}", self.chunk_counter)
+            )?;
             self.buffer.append(&mut decrypted_data);
             encryptor::increase_bytes_le(&mut self.nonce);
         }
@@ -61,4 +67,26 @@ impl<T> Read for ReaderDecryptor<T> where T: Read {
         self.buffer.drain(..len);
         Ok(len)
     }
+}
+
+fn read_chunk_size<T>(source: &mut T) -> Result<usize> where T: Read {
+    let mut small_buffer = [0u8; 4];
+    source.read(&mut small_buffer)?;
+    let res = BigUint::from_bytes_le(&mut small_buffer)
+        .to_u64()
+        .map(|x| x as usize)
+        .ok_or(anyhow!("Chunk size conversion error"));
+    return res;
+}
+
+fn read_chunk_header<T>(source: &mut T) -> Result<()> where T: Read {
+    let mut small_buffer = [0u8; 4];
+    let size = source.read(&mut small_buffer)?;
+    if size == 0 { return Ok(()); }
+    return if size == 4 && small_buffer.iter().all(|&x| x == 0u8)
+    {
+        Ok(())
+    } else {
+        bail!("Chunk header is not valid: {:?}", small_buffer);
+    };
 }
