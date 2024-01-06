@@ -2,6 +2,10 @@ use std::io::{Read, Write};
 use crate::encryptor::EncryptedIterator;
 use num_bigint::{BigUint};
 
+const SEPARATOR_LENGTH: usize = 4;
+const HEADER_LENGTH: usize = 4;
+const SEPARATOR: [u8; SEPARATOR_LENGTH] = [0u8; SEPARATOR_LENGTH];
+
 pub struct EncryptedFileGenerator<T> where T: Read {
     source: EncryptedIterator<T>,
     buffer: Vec<u8>,
@@ -11,26 +15,32 @@ pub struct EncryptedFileGenerator<T> where T: Read {
 
 impl<T> Read for EncryptedFileGenerator<T> where T: Read {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        if self.buffer.len() < buf.len() {
-            if let Some(result) = self.source.next() {
-                self.buffer.append(&mut result.unwrap());
-            }
-            if self.buffer.is_empty() {
-                self.counter += 1;
-                return Ok(0);
-            }
-            if self.counter == 0 {
-                self.chunk_size = self.buffer.len();
-                let mut size = [0u8;8];
-                let bytes = BigUint::from(self.chunk_size).to_bytes_le();
-                size[..bytes.len()].copy_from_slice(&bytes);
-                self.buffer.splice(0..0, size);
+        while self.buffer.len() < buf.len() {
+            match self.source.next() {
+                Some(result) => {
+                    let mut r = result.unwrap();
+                    if self.counter == 0 {
+                        self.chunk_size = r.len();
+                        let mut size = [0u8; HEADER_LENGTH];
+                        let bytes = BigUint::from(self.chunk_size).to_bytes_le();
+                        size[..bytes.len()].copy_from_slice(&bytes);
+                        self.buffer.append(&mut size.to_vec());
+                    }
+                    self.buffer.append(&mut SEPARATOR.to_vec());
+                    self.counter += 1;
+                    self.buffer.append(&mut r)
+                },
+                None => break,
             }
         }
+
+        if self.buffer.is_empty() {
+            return Ok(0);
+        }
+
         let len = std::cmp::min(buf.len(), self.buffer.len());
         buf[..len].copy_from_slice(&self.buffer[..len]);
         self.buffer.drain(..len);
-        self.counter += 1;
         Ok(len)
     }
 }

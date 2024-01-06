@@ -57,9 +57,9 @@ async fn main() {
     //     .to_encrypted_iterator(key, nonce, CHUNK_SIZE as usize);
     // s3_file_storage::upload(iterator, "Hi2.txt".to_string()).await;
 
-    let i = File::open("D:\\File.rtf").unwrap().to_encrypted_iterator(key, nonce, 100);
+    let i = File::open("D:\\File.rtf").unwrap().to_encrypted_iterator(key, nonce, 100 * 1024);
     let mut x = EncryptedFileGenerator::new(i);
-    let mut buffer = [0u8;10];
+    let mut buffer = [0u8;110];
     loop {
         match x.read(&mut buffer) {
             Ok(0) => break,
