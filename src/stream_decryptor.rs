@@ -1,8 +1,8 @@
-use std::io::{Read, Write};
+use std::io::Read;
 use num_bigint::{BigUint};
 use num_traits::ToPrimitive;
 use crate::encryptor;
-use crate::encryptor::{AsEncryptedIterator, EncryptedIterator, Key, Nonce};
+use crate::encryptor::{Key, Nonce};
 
 pub struct ReaderDecryptor<T> where T: Read {
     source: T,
@@ -30,7 +30,7 @@ impl<T: Read> AsReaderDecryptor<T> for T {
 
 impl<T> Read for ReaderDecryptor<T> where T: Read {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        if (self.chunk_size == 0) {
+        if self.chunk_size == 0 {
             let mut small_buffer = [0u8; 4];
             self.source.read(&mut small_buffer).unwrap();
             self.chunk_size = BigUint::from_bytes_le(&mut small_buffer).to_u64().unwrap() as usize;
@@ -43,7 +43,7 @@ impl<T> Read for ReaderDecryptor<T> where T: Read {
             let bytes_read = match self.source.read(&mut buffer) {
                 Ok(0) => break,
                 Ok(size) => size,
-                Err(e) => 0,
+                Err(_e) => 0,
             };
             let mut decrypted_data = encryptor::decrypt(
                 &buffer[..bytes_read].to_vec(),

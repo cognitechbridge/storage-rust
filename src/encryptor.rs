@@ -11,7 +11,7 @@ use aead::{
 use num_bigint::{BigUint};
 use num_traits::{One};
 use generic_array::{ArrayLength, GenericArray};
-use std::io::{Read, Write};
+use std::io::Read;
 
 
 pub type Result<T> = core::result::Result<T, aead::Error>;
@@ -68,19 +68,6 @@ impl<T> Iterator for EncryptedIterator<T> where T: Read {
     }
 }
 
-pub fn process_encrypted_data<W, I>(enc: I, writer: &mut W, nonce_init: Nonce, key: Key)
-    where
-        W: Write,
-        I: Iterator<Item=Result<Vec<u8>>>,
-{
-    let mut nonce = nonce_init.clone();
-    for encrypted_data in enc {
-        let decrypted_data = decrypt(&encrypted_data.unwrap(), &key, &nonce).unwrap();
-        writer.write_all(decrypted_data.as_slice()).unwrap();
-        increase_bytes_le(&mut nonce);
-    }
-}
-
 pub fn increase_bytes_le<T>(nonce: &mut GenericArray<u8, T>) where T: ArrayLength<u8> {
     let mut number = BigUint::from_bytes_le(nonce);
     number += BigUint::one();
@@ -99,6 +86,5 @@ pub fn encrypt(plain: &Vec<u8>, key: &Key, nonce: &Nonce) -> Result<Vec<u8>> {
 pub fn decrypt(encrypted: &Vec<u8>, key: &Key, nonce: &Nonce) -> Result<Vec<u8>> {
     let cipher = Crypto::new(&key);
     let plain_result = cipher.decrypt(&nonce, encrypted.as_ref());
-
     return plain_result;
 }

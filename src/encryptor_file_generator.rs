@@ -1,5 +1,5 @@
-use std::io::{Read, Write};
-use crate::encryptor::{AsEncryptedIterator, EncryptedIterator, Key, Nonce};
+use std::io::Read;
+use crate::encryptor::EncryptedIterator;
 use num_bigint::{BigUint};
 
 const SEPARATOR_LENGTH: usize = 4;
@@ -29,7 +29,7 @@ impl<T> Read for EncryptedFileGenerator<T> where T: Read {
                     self.buffer.append(&mut SEPARATOR.to_vec());
                     self.counter += 1;
                     self.buffer.append(&mut r)
-                },
+                }
                 None => break,
             }
         }

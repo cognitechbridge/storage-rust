@@ -19,8 +19,8 @@ use crate::stream_decryptor::{AsReaderDecryptor};
 
 const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 
-//#[tokio::main]
-fn main() {
+#[tokio::main]
+async fn main() {
     println!("Hello, world!");
 
     // let key = ChaCha20Poly1305::generate_key(&mut OsRng);
@@ -36,13 +36,7 @@ fn main() {
         nonce[i] = i as u8;
     }
 
-    // let file = File::create("D:\\File2.rtf").unwrap();
-    // let mut writer = BufWriter::new(file);
-    //
-    // encryptor::process_encrypted_data(
-    //     File::open("D:\\File.rtf").unwrap().to_encrypted_iterator(key, nonce, 100 * 1024),
-    //     &mut writer, nonce,
-    //     key);
+    // ************************ Generate Sample file *****************************
 
     // let mut file = File::create("D:\\Sample.txt").expect("Could not create sample file.");
     // // Loop until the file is 5 chunks.
@@ -55,45 +49,38 @@ fn main() {
     //         .expect("Error writing to file.");
     // }
 
+    // ************************ Upload *****************************
+
     // let mut reader = File::open("D:\\Sample.txt")
     //     .unwrap()
     //     .to_encrypted_iterator(key, nonce, CHUNK_SIZE as usize)
     //     .to_encrypted_file_generator();
     // s3_file_storage::upload(&mut reader, "Hi3.txt".to_string()).await;
 
-    let download_file_path = "D:\\DDD.txt";
-    let decrypt_file_path = "D:\\XXX.txt";
 
-    let mut file = File::create(download_file_path).unwrap();
-    crate::s3_file_storage::download(&mut file,"Hi3.txt".to_string()).await;
 
-    let mut file = File::open(download_file_path).unwrap().to_reader_decryptor(key, nonce);
-    let mut output_file = File::create(decrypt_file_path).unwrap();
-    let mut buffer = vec![0; 1024*1024*100];
-    loop {
-        // Read up to 1KB from the input file
-        let bytes_read = file.read(&mut buffer).unwrap();
+    // ************************ Download *****************************
 
-        // If no bytes were read, end of file is reached
-        if bytes_read == 0 {
-            break;
-        }
-
-        // Write the bytes to the output file
-        output_file.write_all(&buffer[..bytes_read]).unwrap();
-    }
-
-    // let i = File::open("D:\\File.rtf").unwrap().to_encrypted_iterator(key, nonce, 100 * 1024);
-    // let mut x = EncryptedFileGenerator::new(i);
-    // let mut buffer = [0u8;110];
+    // let download_file_path = "D:\\DDD.txt";
+    // let decrypt_file_path = "D:\\XXX.txt";
+    //
+    // let mut file = File::create(download_file_path).unwrap();
+    // crate::s3_file_storage::download(&mut file,"Hi3.txt".to_string()).await;
+    //
+    // let mut file = File::open(download_file_path).unwrap().to_reader_decryptor(key, nonce);
+    // let mut output_file = File::create(decrypt_file_path).unwrap();
+    // let mut buffer = vec![0; 1024*1024*100];
     // loop {
-    //     match x.read(&mut buffer) {
-    //         Ok(0) => break,
-    //         Ok(n) => {
-    //             println!("{:x?}", &buffer[..n])
-    //         },
-    //         Err(_e) => return, // Handle read error
+    //     // Read up to 1KB from the input file
+    //     let bytes_read = file.read(&mut buffer).unwrap();
+    //
+    //     // If no bytes were read, end of file is reached
+    //     if bytes_read == 0 {
+    //         break;
     //     }
+    //
+    //     // Write the bytes to the output file
+    //     output_file.write_all(&buffer[..bytes_read]).unwrap();
     // }
 }
 
