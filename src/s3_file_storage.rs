@@ -1,4 +1,3 @@
-use std::fs::File;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_s3::operation::create_multipart_upload::CreateMultipartUploadOutput;
 use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};

@@ -14,7 +14,7 @@ use std::io::{Read, Write};
 use encryptor::AsEncryptedIterator;
 use crate::encryptor::{decrypt, Key, Nonce};
 use crate::encryptor_file_generator::EncryptedFileGenerator;
-use crate::stream_decryptor::reader_decrypt;
+use crate::stream_decryptor::{AsReaderDecryptor};
 
 
 const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
@@ -61,11 +61,27 @@ fn main() {
     //     .to_encrypted_file_generator();
     // s3_file_storage::upload(&mut reader, "Hi3.txt".to_string()).await;
 
-    // let mut file = File::create("D:\\DDD.txt").unwrap();
-    // crate::s3_file_storage::download(&mut file,"Hi3.txt".to_string()).await;
+    let download_file_path = "D:\\DDD.txt";
+    let decrypt_file_path = "D:\\XXX.txt";
 
-    let mut file = File::open("D:\\DDD.txt").unwrap();
-    reader_decrypt(&mut file, &key, &nonce);
+    let mut file = File::create(download_file_path).unwrap();
+    crate::s3_file_storage::download(&mut file,"Hi3.txt".to_string()).await;
+
+    let mut file = File::open(download_file_path).unwrap().to_reader_decryptor(key, nonce);
+    let mut output_file = File::create(decrypt_file_path).unwrap();
+    let mut buffer = vec![0; 1024*1024*100];
+    loop {
+        // Read up to 1KB from the input file
+        let bytes_read = file.read(&mut buffer).unwrap();
+
+        // If no bytes were read, end of file is reached
+        if bytes_read == 0 {
+            break;
+        }
+
+        // Write the bytes to the output file
+        output_file.write_all(&buffer[..bytes_read]).unwrap();
+    }
 
     // let i = File::open("D:\\File.rtf").unwrap().to_encrypted_iterator(key, nonce, 100 * 1024);
     // let mut x = EncryptedFileGenerator::new(i);
