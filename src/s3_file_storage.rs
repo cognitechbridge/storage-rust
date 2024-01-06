@@ -1,17 +1,17 @@
+use std::fs::File;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_s3::operation::create_multipart_upload::CreateMultipartUploadOutput;
 use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
-use aws_sdk_s3::Client as S3Client;
+use aws_sdk_s3::{Client as S3Client};
 use aws_smithy_types::byte_stream::ByteStream;
 use aws_config::BehaviorVersion;
-use std::io::Read;
+use std::io::{Read, Write};
 
 const CHUNK_SIZE: usize = 10 * 1024 * 1024;
+const BUCKET_NAME: &str = "ctb-test-2";
 
-pub async fn upload<R>(reader: &mut R, key: String)
-    where
-        R: Read,
-{
+
+pub async fn client() -> S3Client {
     let region_provider = RegionProviderChain::default_provider();
     let config = aws_config::defaults(BehaviorVersion::latest())
         .region(region_provider)
@@ -19,7 +19,15 @@ pub async fn upload<R>(reader: &mut R, key: String)
         .await;
 
     let client = S3Client::new(&config);
-    let bucket_name = "ctb-test-2";
+    return client;
+}
+
+pub async fn upload<R>(reader: &mut R, key: String)
+    where
+        R: Read,
+{
+    let client = client().await;
+    let bucket_name = BUCKET_NAME;
 
     let multipart_upload_res: CreateMultipartUploadOutput = client
         .create_multipart_upload()
@@ -74,4 +82,27 @@ pub async fn upload<R>(reader: &mut R, key: String)
         .send()
         .await
         .unwrap();
+}
+
+pub async fn download<W>(writer: &mut W, key: String) -> Result<usize, anyhow::Error>
+    where
+        W: Write,
+{
+    let client = client().await;
+
+    let mut object = client
+        .get_object()
+        .bucket(BUCKET_NAME)
+        .key(key)
+        .send()
+        .await?;
+
+    let mut byte_count = 0_usize;
+    while let Some(bytes) = object.body.try_next().await? {
+        let bytes_len = bytes.len();
+        writer.write_all(&bytes)?;
+        byte_count += bytes_len;
+    }
+
+    Ok(byte_count)
 }
