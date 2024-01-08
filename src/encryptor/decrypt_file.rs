@@ -1,9 +1,9 @@
 use std::io::Read;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail};
 use num_bigint::{BigUint};
 use num_traits::ToPrimitive;
-use crate::{encryptor, map_anyhow_io};
-use crate::encryptor::{Key, Nonce};
+use crate::map_anyhow_io;
+use super::{utils, core, Key, Nonce, Result};
 
 pub struct ReaderDecryptor<T> where T: Read {
     source: T,
@@ -14,11 +14,11 @@ pub struct ReaderDecryptor<T> where T: Read {
     chunk_counter: usize,
 }
 
-pub trait AsReaderDecryptor<T> where T: Read {
+pub trait ToReaderDecryptor<T> where T: Read {
     fn to_reader_decryptor(self, key: Key, nonce: Nonce) -> ReaderDecryptor<T>;
 }
 
-impl<T: Read> AsReaderDecryptor<T> for T {
+impl<T: Read> ToReaderDecryptor<T> for T {
     fn to_reader_decryptor(self, key: Key, nonce: Nonce) -> ReaderDecryptor<T> {
         return ReaderDecryptor {
             source: self,
@@ -52,11 +52,11 @@ impl<T> Read for ReaderDecryptor<T> where T: Read {
             };
             self.chunk_counter += 1;
             let mut decrypted_data = map_anyhow_io!(
-                encryptor::decrypt(&buffer[..bytes_read].to_vec(),&self.key,&self.nonce),
+                core::decrypt(&buffer[..bytes_read].to_vec(),&self.key,&self.nonce),
                 format!("Error decrypting chunk {}", self.chunk_counter)
             )?;
             self.buffer.append(&mut decrypted_data);
-            encryptor::increase_bytes_le(&mut self.nonce);
+            utils::increase_bytes_le(&mut self.nonce);
         }
         if self.buffer.is_empty() {
             return Ok(0);

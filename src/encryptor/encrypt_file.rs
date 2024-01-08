@@ -1,5 +1,5 @@
 use std::io::Read;
-use crate::encryptor::EncryptedIterator;
+use super::encrypt_iterator::EncryptedIterator;
 use num_bigint::{BigUint};
 use crate::map_anyhow_io;
 
