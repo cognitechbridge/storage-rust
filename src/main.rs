@@ -27,13 +27,9 @@ async fn main() {
     // let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
 
     let mut key = ChaCha20Poly1305::generate_key(&mut OsRng);
-    let mut nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per
 
     for i in 0..key.len() {
         key[i] = i as u8;
-    }
-    for i in 0..nonce.len() {
-        nonce[i] = i as u8;
     }
 
     // ************************ Generate Sample file *****************************
@@ -53,9 +49,9 @@ async fn main() {
 
     // let mut reader = File::open("D:\\Sample.txt")
     //     .unwrap()
-    //     .to_encrypted_iterator(key, nonce, CHUNK_SIZE as usize)
+    //     .to_encrypted_iterator(key, CHUNK_SIZE as usize)
     //     .to_encrypted_file_generator();
-    // s3_file_storage::upload(&mut reader, "Hi4.txt".to_string()).await?;
+    // s3_file_storage::upload(&mut reader, "Hi4.txt".to_string()).await;
 
 
     // ************************ Download *****************************
@@ -66,7 +62,7 @@ async fn main() {
     // let mut file = File::create(download_file_path).unwrap();
     // crate::s3_file_storage::download(&mut file,"Hi3.txt".to_string()).await;
     //
-    // let mut file = File::open(download_file_path).unwrap().to_reader_decryptor(key, nonce);
+    // let mut file = File::open(download_file_path).unwrap().to_reader_decryptor(key);
     // let mut output_file = File::create(decrypt_file_path).unwrap();
     // let mut buffer = vec![0; 1024*1024*100];
     // loop {

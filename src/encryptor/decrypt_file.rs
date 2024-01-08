@@ -15,15 +15,15 @@ pub struct ReaderDecryptor<T> where T: Read {
 }
 
 pub trait ToReaderDecryptor<T> where T: Read {
-    fn to_reader_decryptor(self, key: Key, nonce: Nonce) -> ReaderDecryptor<T>;
+    fn to_reader_decryptor(self, key: Key) -> ReaderDecryptor<T>;
 }
 
 impl<T: Read> ToReaderDecryptor<T> for T {
-    fn to_reader_decryptor(self, key: Key, nonce: Nonce) -> ReaderDecryptor<T> {
+    fn to_reader_decryptor(self, key: Key) -> ReaderDecryptor<T> {
         return ReaderDecryptor {
             source: self,
             key,
-            nonce,
+            nonce: Nonce::default(),
             buffer: vec![],
             chunk_size: 0,
             chunk_counter: 0,
