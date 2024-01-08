@@ -14,7 +14,7 @@ pub struct EncryptedFileGenerator<T> where T: Read {
     chunk_size: usize,
 }
 
-impl<T> Read for EncryptedFileGenerator<T> where T: Read {
+impl<T: Read> Read for EncryptedFileGenerator<T> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         while self.buffer.len() < buf.len() {
             match self.source.next() {
@@ -53,17 +53,6 @@ impl<T: Read> EncryptedIterator<T> {
     pub fn to_encrypted_file_generator(self) -> EncryptedFileGenerator<T> {
         return EncryptedFileGenerator {
             source: self,
-            buffer: vec![],
-            counter: 0,
-            chunk_size: 0,
-        };
-    }
-}
-
-impl<T> EncryptedFileGenerator<T> where T: Read {
-    pub fn new(i: EncryptedIterator<T>) -> Self {
-        return EncryptedFileGenerator {
-            source: i,
             buffer: vec![],
             counter: 0,
             chunk_size: 0,

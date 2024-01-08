@@ -5,16 +5,13 @@ mod macros;
 
 
 use chacha20poly1305::{
-    aead::{AeadCore, KeyInit, OsRng},
+    aead::{KeyInit, OsRng},
     ChaCha20Poly1305,
 };
 
 use std::fs::File;
 use std::io::{Read, Write};
-use crate::encryptor::{encrypt_file::EncryptedFileGenerator,
-                       decrypt_file::{ToReaderDecryptor},
-                       encrypt_iterator::ToEncryptedIterator,
-                       Key, Nonce};
+use crate::encryptor::{ToPlainStream, Key, Nonce, ToEncryptedStream};
 
 
 const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
@@ -49,8 +46,7 @@ async fn main() {
 
     // let mut reader = File::open("D:\\Sample.txt")
     //     .unwrap()
-    //     .to_encrypted_iterator(key, CHUNK_SIZE as usize)
-    //     .to_encrypted_file_generator();
+    //     .to_encrypted_stream(key, CHUNK_SIZE as usize);
     // s3_file_storage::upload(&mut reader, "Hi4.txt".to_string()).await;
 
 
@@ -62,7 +58,7 @@ async fn main() {
     // let mut file = File::create(download_file_path).unwrap();
     // crate::s3_file_storage::download(&mut file,"Hi3.txt".to_string()).await;
     //
-    // let mut file = File::open(download_file_path).unwrap().to_reader_decryptor(key);
+    // let mut file = File::open(download_file_path).unwrap().to_plain_stream(key);
     // let mut output_file = File::create(decrypt_file_path).unwrap();
     // let mut buffer = vec![0; 1024*1024*100];
     // loop {

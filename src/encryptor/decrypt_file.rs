@@ -3,7 +3,7 @@ use anyhow::{anyhow, bail};
 use num_bigint::{BigUint};
 use num_traits::ToPrimitive;
 use crate::map_anyhow_io;
-use super::{utils, core, Key, Nonce, Result};
+use super::{utils, core, Key, Nonce, Result, ToPlainStream};
 
 pub struct ReaderDecryptor<T> where T: Read {
     source: T,
@@ -14,12 +14,8 @@ pub struct ReaderDecryptor<T> where T: Read {
     chunk_counter: usize,
 }
 
-pub trait ToReaderDecryptor<T> where T: Read {
-    fn to_reader_decryptor(self, key: Key) -> ReaderDecryptor<T>;
-}
-
-impl<T: Read> ToReaderDecryptor<T> for T {
-    fn to_reader_decryptor(self, key: Key) -> ReaderDecryptor<T> {
+impl<T: Read> ToPlainStream<ReaderDecryptor<T>> for T {
+    fn to_plain_stream(self, key: Key) -> ReaderDecryptor<T> {
         return ReaderDecryptor {
             source: self,
             key,
@@ -52,7 +48,7 @@ impl<T> Read for ReaderDecryptor<T> where T: Read {
             };
             self.chunk_counter += 1;
             let mut decrypted_data = map_anyhow_io!(
-                core::decrypt(&buffer[..bytes_read].to_vec(),&self.key,&self.nonce),
+                core::decrypt_chunk(&buffer[..bytes_read].to_vec(),&self.key,&self.nonce),
                 format!("Error decrypting chunk {}", self.chunk_counter)
             )?;
             self.buffer.append(&mut decrypted_data);
