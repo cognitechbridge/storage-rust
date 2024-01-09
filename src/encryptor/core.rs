@@ -1,7 +1,7 @@
 use aead::Aead;
 use anyhow::{bail};
 use crypto_common::KeyInit;
-use super::{Crypto, Key, Nonce, Result};
+use super::types::{Nonce, Key, Result, Crypto};
 
 
 pub fn encrypt_chunk(plain: &Vec<u8>, key: &Key, nonce: &Nonce) -> Result<Vec<u8>> {

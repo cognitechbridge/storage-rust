@@ -1,11 +1,9 @@
 use std::io::Read;
 use super::encrypt_iterator::EncryptedIterator;
+use super::constants::{HEADER_LENGTH, SEPARATOR};
 use num_bigint::{BigUint};
 use crate::map_anyhow_io;
 
-const SEPARATOR_LENGTH: usize = 4;
-const HEADER_LENGTH: usize = 4;
-const SEPARATOR: [u8; SEPARATOR_LENGTH] = [0u8; SEPARATOR_LENGTH];
 
 pub struct EncryptedFileGenerator<T> where T: Read {
     source: EncryptedIterator<T>,

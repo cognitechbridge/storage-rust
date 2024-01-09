@@ -11,7 +11,7 @@ use chacha20poly1305::{
 
 use std::fs::File;
 use std::io::{Read, Write};
-use crate::encryptor::{ToPlainStream, Key, Nonce, ToEncryptedStream};
+use crate::encryptor::{ToPlainStream, ToEncryptedStream};
 
 
 const CHUNK_SIZE: u64 = 1024 * 1024 * 5;

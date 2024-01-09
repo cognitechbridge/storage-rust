@@ -3,7 +3,8 @@ use anyhow::{anyhow, bail};
 use num_bigint::{BigUint};
 use num_traits::ToPrimitive;
 use crate::map_anyhow_io;
-use super::{utils, core, Key, Nonce, Result, ToPlainStream};
+use super::{utils, core, ToPlainStream};
+use super::types::{Result, Key, Nonce};
 
 pub struct ReaderDecryptor<T> where T: Read {
     source: T,

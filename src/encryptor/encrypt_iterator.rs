@@ -1,6 +1,7 @@
 use std::io::Read;
 use anyhow::anyhow;
-use super::{utils::increase_bytes_le, core, Key, Nonce, Result};
+use super::{utils::increase_bytes_le, core};
+use super::types::{Key, Nonce, Result};
 
 pub trait ToEncryptedIterator<T> where T: Read {
     fn to_encrypted_iterator(self, key: Key, chunk_size: usize) -> EncryptedIterator<T>;
