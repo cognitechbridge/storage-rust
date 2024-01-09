@@ -10,7 +10,9 @@ use chacha20poly1305::{
 };
 
 use std::fs::File;
+use encryptor::types::Crypto;
 use std::io::{Read, Write};
+use aead::AeadCore;
 use crate::encryptor::{ToPlainStream, ToEncryptedStream};
 
 
@@ -20,10 +22,7 @@ const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 async fn main() {
     println!("Hello, world!");
 
-    // let key = ChaCha20Poly1305::generate_key(&mut OsRng);
-    // let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng); // 96-bits; unique per message
-
-    let mut key = ChaCha20Poly1305::generate_key(&mut OsRng);
+    let mut key = Crypto::generate_key(&mut OsRng);
 
     for i in 0..key.len() {
         key[i] = i as u8;
@@ -47,16 +46,16 @@ async fn main() {
     // let mut reader = File::open("D:\\Sample.txt")
     //     .unwrap()
     //     .to_encrypted_stream(key, CHUNK_SIZE as usize);
-    // s3_file_storage::upload(&mut reader, "Hi4.txt".to_string()).await;
+    // s3_file_storage::upload(&mut reader, "Sample-Encrypted.txt".to_string()).await;
 
 
     // ************************ Download *****************************
 
-    // let download_file_path = "D:\\DDD.txt";
-    // let decrypt_file_path = "D:\\XXX.txt";
+    // let download_file_path = "D:\\Sample-Encrypted.txt";
+    // let decrypt_file_path = "D:\\Sample-UnEncrypted.txt";
     //
     // let mut file = File::create(download_file_path).unwrap();
-    // crate::s3_file_storage::download(&mut file,"Hi3.txt".to_string()).await;
+    // crate::s3_file_storage::download(&mut file,"Sample-Encrypted.txt".to_string()).await;
     //
     // let mut file = File::open(download_file_path).unwrap().to_plain_stream(key);
     // let mut output_file = File::create(decrypt_file_path).unwrap();

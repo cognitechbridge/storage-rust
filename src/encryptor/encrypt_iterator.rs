@@ -1,11 +1,9 @@
+use super::types::{Key, Nonce, Result};
+use super::{utils, core};
+
 use std::io::Read;
 use anyhow::anyhow;
-use super::{utils::increase_bytes_le, core};
-use super::types::{Key, Nonce, Result};
 
-pub trait ToEncryptedIterator<T> where T: Read {
-    fn to_encrypted_iterator(self, key: Key, chunk_size: usize) -> EncryptedIterator<T>;
-}
 
 
 pub struct EncryptedIterator<T> where T: Read {
@@ -16,6 +14,14 @@ pub struct EncryptedIterator<T> where T: Read {
 }
 
 impl<T: Read> EncryptedIterator<T> {
+    pub fn new(source: T, key: Key, chunk_size: usize) -> EncryptedIterator<T> {
+        return EncryptedIterator {
+            source,
+            key,
+            nonce: Nonce::default(),
+            chunk_size,
+        };
+    }
     pub fn read_bytes_encrypted(&mut self, size: usize) -> Option<Result<Vec<u8>>> {
         let mut buffer = vec![0u8; size];
         let res = self.source.read(&mut buffer);
@@ -29,7 +35,7 @@ impl<T: Read> EncryptedIterator<T> {
             }
             Err(e) => Some(Err(anyhow!(e))),
         };
-        increase_bytes_le(&mut self.nonce);
+        utils::increase_bytes_le(&mut self.nonce);
         return ret;
     }
 }
@@ -38,16 +44,5 @@ impl<T: Read> Iterator for EncryptedIterator<T> {
     type Item = Result<Vec<u8>>;
     fn next(&mut self) -> Option<Self::Item> {
         return self.read_bytes_encrypted(self.chunk_size);
-    }
-}
-
-impl<T: Read> ToEncryptedIterator<T> for T {
-    fn to_encrypted_iterator(self, key: Key, chunk_size: usize) -> EncryptedIterator<T> {
-        return EncryptedIterator {
-            source: self,
-            key,
-            nonce: Nonce::default(),
-            chunk_size,
-        };
     }
 }
