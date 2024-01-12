@@ -2,6 +2,7 @@ mod encryptor;
 #[macro_use]
 mod macros;
 mod storage;
+mod key_drive;
 
 
 use chacha20poly1305::{
@@ -13,7 +14,10 @@ use std::fs::File;
 use encryptor::types::Crypto;
 use std::io::{Read, Write};
 use aead::AeadCore;
+use uuid::{NoContext, Uuid};
+use uuid::timestamp::Timestamp;
 use crate::encryptor::{ToPlainStream, ToEncryptedStream};
+use crate::key_drive::generate_key;
 use crate::storage::*;
 
 
@@ -24,10 +28,18 @@ async fn main() {
     println!("Hello, world!");
 
     let mut key = Crypto::generate_key(&mut OsRng);
+    println!("Key: {:x?}", key);
 
     for i in 0..key.len() {
         key[i] = i as u8;
     }
+    let my_uuid = Uuid::new_v7(Timestamp::now(NoContext));
+    let x = generate_key(&key, my_uuid.as_bytes()).unwrap();
+    println!("Derived 1:{:x?}", x);
+
+    let my_uuid = Uuid::new_v7(Timestamp::now(NoContext));
+    let x = generate_key(&key, my_uuid.as_bytes()).unwrap();
+    println!("Derived 2:{:x?}", x);
 
     // ************************ Generate Sample file *****************************
 
