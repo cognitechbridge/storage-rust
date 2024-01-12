@@ -1,5 +1,5 @@
 use std::io::Read;
-use types::Key;
+use types::*;
 
 mod encrypt_file;
 mod decrypt_file;
@@ -10,7 +10,7 @@ mod constants;
 pub mod types;
 
 pub trait ToEncryptedStream<'a, Y> where Y: Read {
-    fn to_encrypted_stream(self, key: &'a Key, chunk_size: usize) -> Y;
+    fn to_encrypted_stream(self, key: &'a Key, id_context: IdContext, chunk_size: usize) -> Result<Y>;
 }
 
 pub trait ToPlainStream<'a, Y> where Y: Read {

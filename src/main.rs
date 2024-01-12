@@ -28,7 +28,6 @@ async fn main() {
     println!("Hello, world!");
 
     let mut key = Crypto::generate_key(&mut OsRng);
-    println!("Key: {:x?}", key);
 
     for i in 0..key.len() {
         key[i] = i as u8;
@@ -56,15 +55,16 @@ async fn main() {
 
     // ***************** Storage ***********************************
 
-    // let storage = crate::storage::s3::S3Storage::new("ctb-test-2".to_string(), 10 * 1024 * 1024);
+    let storage = crate::storage::s3::S3Storage::new("ctb-test-2".to_string(), 10 * 1024 * 1024);
+    let uuid = Uuid::new_v7(Timestamp::now(NoContext));
 
     // ************************ Upload *****************************
 
     // let mut reader = File::open("D:\\Sample.txt")
     //     .unwrap()
-    //     .to_encrypted_stream(&key, CHUNK_SIZE as usize);
+    //     .to_encrypted_stream(&key, uuid.to_string().into_bytes(), CHUNK_SIZE as usize).unwrap();
     //
-    // storage.upload(&mut reader, "Sample-Encrypted-2.txt".to_string()).await.unwrap();
+    // storage.upload(&mut reader, uuid.to_string()).await.unwrap();
 
 
     // ************************ Download *****************************
@@ -73,11 +73,11 @@ async fn main() {
     // let decrypt_file_path = "D:\\Sample-UnEncrypted.txt";
     //
     // let mut file = File::create(download_file_path).unwrap();
-    // storage.download(&mut file,"Sample-Encrypted.txt".to_string()).await.unwrap();
+    // storage.download(&mut file, uuid.to_string()).await.unwrap();
     //
     // let mut file = File::open(download_file_path).unwrap().to_plain_stream(&key);
     // let mut output_file = File::create(decrypt_file_path).unwrap();
-    // let mut buffer = vec![0; 1024*1024*100];
+    // let mut buffer = vec![0; 1024 * 1024 * 100];
     // loop {
     //     // Read up to 1KB from the input file
     //     let bytes_read = file.read(&mut buffer).unwrap();

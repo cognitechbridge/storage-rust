@@ -33,9 +33,13 @@ impl<'a, T: Read> ToPlainStream<'a, ReaderDecryptor<'a, T>> for T {
 impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.chunk_size == 0 {
+            map_anyhow_io!(
+                read_file_header(&mut self.source),
+                "Error reading file header"
+            )?;
             self.chunk_size = map_anyhow_io!(
                 read_chunk_size(&mut self.source),
-                "Error reading chunk size"
+                "Error reading file chunk size"
             )?;
         }
         while self.buffer.len() < buf.len() {
@@ -66,6 +70,19 @@ impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
         self.buffer.drain(..len);
         Ok(len)
     }
+}
+
+fn read_file_header(source: &mut impl Read) -> Result<()> {
+    let mut buffer = [0u8; 1];
+    source.read(&mut buffer)?;
+    if buffer[0] != 1u8 {
+        return Err(anyhow!("File version invalid"));
+    }
+
+    let mut buffer = [0u8; 36];
+    source.read(&mut buffer)?;
+
+    return Ok(());
 }
 
 fn read_chunk_size(source: &mut impl Read) -> Result<usize> {
