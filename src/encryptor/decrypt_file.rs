@@ -68,7 +68,7 @@ impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
     }
 }
 
-fn read_chunk_size<T>(source: &mut T) -> Result<usize> where T: Read {
+fn read_chunk_size(source: &mut impl Read) -> Result<usize> {
     let mut small_buffer = [0u8; 4];
     source.read(&mut small_buffer)?;
     let res = BigUint::from_bytes_le(&mut small_buffer)
@@ -78,7 +78,7 @@ fn read_chunk_size<T>(source: &mut T) -> Result<usize> where T: Read {
     return res;
 }
 
-fn read_chunk_header<T>(source: &mut T) -> Result<()> where T: Read {
+fn read_chunk_header(source: &mut impl Read) -> Result<()> {
     let mut small_buffer = [0u8; 4];
     let size = source.read(&mut small_buffer)?;
     if size == 0 { return Ok(()); }
