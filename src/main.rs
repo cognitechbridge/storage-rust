@@ -1,7 +1,7 @@
 mod encryptor;
-mod s3_file_storage;
 #[macro_use]
 mod macros;
+mod storage;
 
 
 use chacha20poly1305::{
@@ -14,6 +14,7 @@ use encryptor::types::Crypto;
 use std::io::{Read, Write};
 use aead::AeadCore;
 use crate::encryptor::{ToPlainStream, ToEncryptedStream};
+use crate::storage::*;
 
 
 const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
@@ -41,13 +42,17 @@ async fn main() {
     //         .expect("Error writing to file.");
     // }
 
-    // ************************ Upload *****************************
+    // ***************** Storage ***********************************
 
+    // let storage = crate::storage::s3::S3Storage::new("ctb-test-2".to_string(), 10 * 1024 * 1024);
+
+    // ************************ Upload *****************************
 
     // let mut reader = File::open("D:\\Sample.txt")
     //     .unwrap()
     //     .to_encrypted_stream(&key, CHUNK_SIZE as usize);
-    // s3_file_storage::upload(&mut reader, "Sample-Encrypted.txt".to_string()).await;
+    //
+    // storage.upload(&mut reader, "Sample-Encrypted-2.txt".to_string()).await.unwrap();
 
 
     // ************************ Download *****************************
@@ -56,7 +61,7 @@ async fn main() {
     // let decrypt_file_path = "D:\\Sample-UnEncrypted.txt";
     //
     // let mut file = File::create(download_file_path).unwrap();
-    // crate::s3_file_storage::download(&mut file,"Sample-Encrypted.txt".to_string()).await;
+    // storage.download(&mut file,"Sample-Encrypted.txt".to_string()).await.unwrap();
     //
     // let mut file = File::open(download_file_path).unwrap().to_plain_stream(&key);
     // let mut output_file = File::create(decrypt_file_path).unwrap();
