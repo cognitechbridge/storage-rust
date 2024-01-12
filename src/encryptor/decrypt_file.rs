@@ -8,17 +8,17 @@ use num_traits::ToPrimitive;
 use crate::map_anyhow_io;
 
 
-pub struct ReaderDecryptor<T> where T: Read {
+pub struct ReaderDecryptor<'a, T> where T: Read {
     source: T,
-    key: Key,
+    key: &'a Key,
     nonce: Nonce,
     buffer: Vec<u8>,
     chunk_size: usize,
     chunk_counter: usize,
 }
 
-impl<T: Read> ToPlainStream<ReaderDecryptor<T>> for T {
-    fn to_plain_stream(self, key: Key) -> ReaderDecryptor<T> {
+impl<'a, T: Read> ToPlainStream<'a, ReaderDecryptor<'a, T>> for T {
+    fn to_plain_stream(self, key: &'a Key) -> ReaderDecryptor<'a, T> {
         return ReaderDecryptor {
             source: self,
             key,
@@ -30,7 +30,7 @@ impl<T: Read> ToPlainStream<ReaderDecryptor<T>> for T {
     }
 }
 
-impl<T> Read for ReaderDecryptor<T> where T: Read {
+impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.chunk_size == 0 {
             self.chunk_size = map_anyhow_io!(

@@ -9,12 +9,12 @@ mod core;
 mod constants;
 pub mod types;
 
-pub trait ToEncryptedStream<Y> where Y: Read {
-    fn to_encrypted_stream(self, key: Key, chunk_size: usize) -> Y;
+pub trait ToEncryptedStream<'a, Y> where Y: Read {
+    fn to_encrypted_stream(self, key: &'a Key, chunk_size: usize) -> Y;
 }
 
-pub trait ToPlainStream<Y> where Y: Read {
-    fn to_plain_stream(self, key: Key) -> Y;
+pub trait ToPlainStream<'a, Y> where Y: Read {
+    fn to_plain_stream(self, key: &'a Key) -> Y;
 }
 
 

@@ -43,9 +43,10 @@ async fn main() {
 
     // ************************ Upload *****************************
 
+
     // let mut reader = File::open("D:\\Sample.txt")
     //     .unwrap()
-    //     .to_encrypted_stream(key, CHUNK_SIZE as usize);
+    //     .to_encrypted_stream(&key, CHUNK_SIZE as usize);
     // s3_file_storage::upload(&mut reader, "Sample-Encrypted.txt".to_string()).await;
 
 
@@ -57,7 +58,7 @@ async fn main() {
     // let mut file = File::create(download_file_path).unwrap();
     // crate::s3_file_storage::download(&mut file,"Sample-Encrypted.txt".to_string()).await;
     //
-    // let mut file = File::open(download_file_path).unwrap().to_plain_stream(key);
+    // let mut file = File::open(download_file_path).unwrap().to_plain_stream(&key);
     // let mut output_file = File::create(decrypt_file_path).unwrap();
     // let mut buffer = vec![0; 1024*1024*100];
     // loop {

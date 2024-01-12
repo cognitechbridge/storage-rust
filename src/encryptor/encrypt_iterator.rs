@@ -6,15 +6,15 @@ use anyhow::anyhow;
 
 
 
-pub struct EncryptedIterator<T> where T: Read {
+pub struct EncryptedIterator<'a, T> where T: Read {
     source: T,
-    key: Key,
+    key: &'a Key,
     nonce: Nonce,
     pub chunk_size: usize,
 }
 
-impl<T: Read> EncryptedIterator<T> {
-    pub fn new(source: T, key: Key, chunk_size: usize) -> EncryptedIterator<T> {
+impl<'a, T: Read> EncryptedIterator<'a, T> {
+    pub fn new(source: T, key: &'a Key, chunk_size: usize) -> EncryptedIterator<'a, T> {
         return EncryptedIterator {
             source,
             key,
@@ -40,7 +40,7 @@ impl<T: Read> EncryptedIterator<T> {
     }
 }
 
-impl<T: Read> Iterator for EncryptedIterator<T> {
+impl<'a, T: Read> Iterator for EncryptedIterator<'a, T> {
     type Item = Result<Vec<u8>>;
     fn next(&mut self) -> Option<Self::Item> {
         return self.read_bytes_encrypted(self.chunk_size);

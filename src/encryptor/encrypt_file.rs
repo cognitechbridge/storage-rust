@@ -9,15 +9,15 @@ use num_bigint::{BigUint};
 use crate::map_anyhow_io;
 
 
-pub struct EncryptedFileGenerator<T> where T: Read {
-    source: EncryptedIterator<T>,
+pub struct EncryptedFileGenerator<'a, T> where T: Read {
+    source: EncryptedIterator<'a, T>,
     buffer: Vec<u8>,
     counter: u32,
     chunk_size: usize,
 }
 
-impl<T: Read> EncryptedFileGenerator<T> {
-    fn new(iterator: EncryptedIterator<T>) -> Self {
+impl<'a, T: Read> EncryptedFileGenerator<'a, T> {
+    fn new(iterator: EncryptedIterator<'a, T>) -> Self {
         return EncryptedFileGenerator {
             source: iterator,
             buffer: vec![],
@@ -27,7 +27,7 @@ impl<T: Read> EncryptedFileGenerator<T> {
     }
 }
 
-impl<T: Read> Read for EncryptedFileGenerator<T> {
+impl<'a, T: Read> Read for EncryptedFileGenerator<'a, T> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         while self.buffer.len() < buf.len() {
             match self.source.next() {
@@ -62,8 +62,8 @@ impl<T: Read> Read for EncryptedFileGenerator<T> {
     }
 }
 
-impl<T: Read> ToEncryptedStream<EncryptedFileGenerator<T>> for T {
-    fn to_encrypted_stream(self, key: Key, chunk_size: usize) -> EncryptedFileGenerator<T> {
+impl<'a, T: Read> ToEncryptedStream<'a, EncryptedFileGenerator<'a, T>> for T {
+    fn to_encrypted_stream(self, key: &'a Key, chunk_size: usize) -> EncryptedFileGenerator<'a, T> {
         let iterator = EncryptedIterator::new(self, key, chunk_size);
         return EncryptedFileGenerator::new(iterator);
     }
