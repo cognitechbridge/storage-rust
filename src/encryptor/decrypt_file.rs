@@ -73,13 +73,19 @@ impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
 }
 
 fn read_file_header(source: &mut impl Read) -> Result<()> {
+    //Read file version
     let mut buffer = [0u8; 1];
     source.read(&mut buffer)?;
     if buffer[0] != 1u8 {
         return Err(anyhow!("File version invalid"));
     }
 
-    let mut buffer = [0u8; 36];
+    //Read context size
+    source.read(&mut buffer)?;
+    let context_size = buffer[0];
+
+    //Read context
+    let mut buffer = vec![0; context_size as usize];
     source.read(&mut buffer)?;
 
     return Ok(());

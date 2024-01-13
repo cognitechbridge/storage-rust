@@ -62,7 +62,7 @@ async fn main() {
 
     // let mut reader = File::open("D:\\Sample.txt")
     //     .unwrap()
-    //     .to_encrypted_stream(&key, uuid.to_string().into_bytes(), CHUNK_SIZE as usize).unwrap();
+    //     .to_encrypted_stream(&key, uuid, CHUNK_SIZE as usize).unwrap();
     //
     // storage.upload(&mut reader, uuid.to_string()).await.unwrap();
 
