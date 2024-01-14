@@ -1,12 +1,13 @@
-use super::types::{Result, Key, Nonce, Context};
+use super::types::*;
+use super::constants::*;
 use super::{utils, core, ToPlainStream};
 
 use std::io::Read;
+use aead::AeadCore;
 use anyhow::{anyhow, bail};
-use num_bigint::{BigUint};
-use num_traits::ToPrimitive;
 use crate::map_anyhow_io;
 
+use generic_array::typenum::Unsigned;
 
 pub struct ReaderDecryptor<'a, T> where T: Read {
     source: T,
@@ -33,14 +34,11 @@ impl<'a, T: Read> ToPlainStream<'a, ReaderDecryptor<'a, T>> for T {
 impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.chunk_size == 0 {
-            map_anyhow_io!(
+            let header = map_anyhow_io!(
                 read_file_header(&mut self.source),
                 "Error reading file header"
             )?;
-            self.chunk_size = map_anyhow_io!(
-                read_chunk_size(&mut self.source),
-                "Error reading file chunk size"
-            )?;
+            self.chunk_size = header.chunk_size as usize + <Crypto as AeadCore>::NonceSize::to_usize();
         }
         while self.buffer.len() < buf.len() {
             map_anyhow_io!(
@@ -72,17 +70,14 @@ impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
     }
 }
 
-fn read_file_header(source: &mut impl Read) -> Result<()> {
+fn read_file_header(source: &mut impl Read) -> Result<EncryptionFileHeader> {
     //Read file version
     read_file_version(source)?;
 
-    //Read client id
-    read_context(source)?;
+    //Read file header
+    let header = read_header(source)?;
 
-    //Read file id
-    read_context(source)?;
-
-    return Ok(());
+    return Ok(header);
 }
 
 fn read_file_version(source: &mut (impl Read + Sized)) -> Result<()> {
@@ -94,26 +89,19 @@ fn read_file_version(source: &mut (impl Read + Sized)) -> Result<()> {
     return Ok(());
 }
 
-fn read_context(source: &mut (impl Read + Sized)) -> Result<Context> {
+fn read_header(source: &mut (impl Read + Sized)) -> Result<EncryptionFileHeader> {
     //Read context size
-    let mut buffer_1 = [0u8; 1];
-    source.read(&mut buffer_1)?;
-    let context_size = buffer_1[0];
+    let mut buffer_2 = [0u8; 2];
+    source.read(&mut buffer_2)?;
+    let context_size = u16::from_le_bytes(buffer_2);
 
     //Read context
     let mut buffer_context = vec![0; context_size as usize];
     source.read(&mut buffer_context)?;
-    Ok(buffer_context)
-}
 
-fn read_chunk_size(source: &mut impl Read) -> Result<usize> {
-    let mut small_buffer = [0u8; 4];
-    source.read(&mut small_buffer)?;
-    let res = BigUint::from_bytes_le(&mut small_buffer)
-        .to_u64()
-        .map(|x| x as usize)
-        .ok_or(anyhow!("Chunk size conversion error"));
-    return res;
+    let file_header = serde_json::from_slice(buffer_context.as_slice()).unwrap();
+
+    Ok(file_header)
 }
 
 fn read_chunk_header(source: &mut impl Read) -> Result<()> {

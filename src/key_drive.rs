@@ -1,22 +1,41 @@
-use aead::consts::U32;
-use generic_array::GenericArray;
-use hmac::{Hmac, Mac};
-use sha3::Sha3_256;
-use anyhow::Result;
-use num_bigint::BigUint;
-use num_traits::ToPrimitive;
+use anyhow::{bail, Result};
+use crypto_common::{
+    Key as TKey
+};
+use aead::{Nonce as TNonce};
 
-use argon2::{Algorithm, Argon2, Params, Version};
+use chacha20poly1305::{
+    aead::{Aead, AeadCore, KeyInit, OsRng},
+};
+use generic_array::sequence::Lengthen;
 
-const MAX_ITERATION: u32 = 10000;
+pub type Crypto = chacha20poly1305::XChaCha20Poly1305;
+pub type Key = TKey<Crypto>;
+pub type Nonce = TNonce<Crypto>;
 
-pub type Key = GenericArray<u8, U32>;
+use serde::{Serialize, Deserialize};
 
-pub fn generate_key(root_key: &Key, context: &[u8]) -> Result<Key> {
-    let mut derived_key = [0u8; 32];
-    let params = Params::new(1024 * 19, 2, 1, None).unwrap();
-    let x = Argon2::new(Algorithm::default(), Version::default(), params);
-    x.hash_password_into(root_key, context, &mut derived_key);
+use base64::prelude::*;
 
-    return Ok(Key::from(derived_key));
+
+#[derive(Serialize, Deserialize)]
+pub struct Recovery {
+    pub alg: String,
+    pub nonce: String,
+    pub cipher: String,
+}
+
+pub fn generate_key_recover_blob(root_key: &Key, key: &Key) -> Result<Vec<u8>> {
+    let nonce = Crypto::generate_nonce(&mut OsRng);
+    let cipher = Crypto::new(&root_key);
+    let cipher_result = cipher.encrypt(&nonce, key.as_ref())
+        .or_else(|_x| bail!("Encryption error"))?;
+    let x = Recovery {
+        alg: "XChaCha20Poly1305".to_string(),
+        nonce: BASE64_STANDARD.encode(nonce).to_string(),
+        cipher: BASE64_STANDARD.encode(cipher_result).to_string(),
+    };
+    let serialized = serde_json::to_string(&x).unwrap();
+    let blob = BASE64_STANDARD.encode(serialized.as_bytes());
+    return Ok(blob.as_bytes().to_vec());
 }

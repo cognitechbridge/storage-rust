@@ -475,9 +475,9 @@ checksum = "349a06037c7bf932dd7e7d1f653678b2038b9ad46a74102f1fc7bd7872678cce"
 
 [[package]]
 name = "base64"
-version = "0.21.5"
+version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35636a1494ede3b646cc98f74f8e62c773a38a659ebc777a2cf26b9b74171df9"
+checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
 name = "base64-simd"
@@ -1506,6 +1506,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_json"
+version = "1.0.111"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "176e46fa42316f18edd598015a5166857fc835ec732f5215eac6b7bdbf0a84f4"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
+]
+
+[[package]]
 name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1608,6 +1619,7 @@ dependencies = [
  "aws-sdk-s3",
  "aws-smithy-types",
  "aws-types",
+ "base64",
  "bytes",
  "chacha20poly1305",
  "chrono",
@@ -1616,6 +1628,8 @@ dependencies = [
  "hmac",
  "num-bigint",
  "num-traits",
+ "serde",
+ "serde_json",
  "sha3",
  "tokio",
  "uuid",

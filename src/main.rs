@@ -16,8 +16,8 @@ use std::io::{Read, Write};
 use aead::AeadCore;
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
-use crate::encryptor::{ToPlainStream, ToEncryptedStream};
-use crate::key_drive::generate_key;
+use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader};
+use crate::key_drive::generate_key_recover_blob;
 use crate::storage::*;
 
 
@@ -33,13 +33,7 @@ async fn main() {
         key[i] = i as u8;
     }
 
-    let client_uuid = Uuid::new_v4();
-    let client_key = generate_key(&key, client_uuid.as_bytes()).unwrap();
-    println!("Derived Client:{:x?}", client_key);
-
-    let file_uuid = Uuid::new_v7(Timestamp::now(NoContext));
-    let file_key = generate_key(&client_key, file_uuid.as_bytes()).unwrap();
-    println!("Derived File:{:x?}", file_key);
+    generate_key_recover_blob(&key, &Crypto::generate_key(&mut OsRng));
 
     // ************************ Generate Sample file *****************************
 
@@ -56,14 +50,40 @@ async fn main() {
 
     // ***************** Storage ***********************************
 
-    let storage = crate::storage::s3::S3Storage::new("ctb-test-2".to_string(), 10 * 1024 * 1024);
+    let storage = s3::S3Storage::new("ctb-test-2".to_string(), 10 * 1024 * 1024);
     let uuid = Uuid::new_v7(Timestamp::now(NoContext));
 
     // ************************ Upload *****************************
 
+    let x = std::any::type_name::<ChaCha20Poly1305>();
+    println!("{}", x);
+
+    let header = EncryptionFileHeader {
+        client_id: "client-id".to_string(),
+        file_id: uuid.to_string(),
+        recovery: "".to_string(),
+        ..Default::default()
+    };
     let mut reader = File::open("D:\\Sample.txt")
         .unwrap()
-        .to_encrypted_stream(&key, "client-id", uuid, CHUNK_SIZE as usize).unwrap();
+        .to_encrypted_stream(&key, header).unwrap();
+
+
+    // let mut output_file = File::create("D:\\Test.txt").unwrap();
+    // let mut buffer = vec![0; 1024 * 1024 * 100];
+    // loop {
+    //     // Read up to 1KB from the input file
+    //     let bytes_read = reader.read(&mut buffer).unwrap();
+    //
+    //     // If no bytes were read, end of file is reached
+    //     if bytes_read == 0 {
+    //         break;
+    //     }
+    //
+    //     // Write the bytes to the output file
+    //     output_file.write_all(&buffer[..bytes_read]).unwrap();
+    // }
+
 
     storage.upload(&mut reader, uuid.to_string()).await.unwrap();
 
@@ -72,7 +92,7 @@ async fn main() {
 
     let download_file_path = "D:\\Sample-Encrypted.txt";
     let decrypt_file_path = "D:\\Sample-UnEncrypted.txt";
-
+    //
     let mut file = File::create(download_file_path).unwrap();
     storage.download(&mut file, uuid.to_string()).await.unwrap();
 

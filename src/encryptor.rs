@@ -1,5 +1,7 @@
 use std::io::Read;
-use types::*;
+use serde::{Deserialize, Serialize};
+
+pub use types::*;
 
 mod encrypt_file;
 mod decrypt_file;
@@ -8,14 +10,11 @@ mod utils;
 mod core;
 mod constants;
 pub mod types;
+mod file_header;
+
 
 pub trait ToEncryptedStream<'a, Y> where Y: Read {
-    fn to_encrypted_stream(self,
-                           key: &'a Key,
-                           client_id_context: impl ToString,
-                           file_id_context: impl ToString,
-                           chunk_size: usize)
-                           -> Result<Y>;
+    fn to_encrypted_stream(self, key: &'a Key, header: EncryptionFileHeader) -> Result<Y>;
 }
 
 pub trait ToPlainStream<'a, Y> where Y: Read {
