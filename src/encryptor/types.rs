@@ -1,7 +1,7 @@
-use crypto_common::{
+pub use crypto_common::{
     Key as TKey
 };
-use aead::{Nonce as TNonce};
+pub use aead::{Nonce as TNonce};
 
 pub use super::file_header::EncryptionFileHeader;
 

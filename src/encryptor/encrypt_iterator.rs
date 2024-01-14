@@ -1,9 +1,8 @@
 use super::types::{Key, Nonce, Result};
-use super::{utils, core};
+use super::{utils, core, Crypto};
 
 use std::io::Read;
 use anyhow::anyhow;
-
 
 
 pub struct EncryptedIterator<'a, T> where T: Read {
@@ -28,7 +27,7 @@ impl<'a, T: Read> EncryptedIterator<'a, T> {
         let ret = match res {
             Ok(count) => {
                 if count > 0 {
-                    Some(core::encrypt_chunk(&buffer[..count].to_vec(), &self.key, &self.nonce))
+                    Some(core::encrypt_chunk::<Crypto>(&buffer[..count].to_vec(), &self.key, &self.nonce))
                 } else {
                     None
                 }

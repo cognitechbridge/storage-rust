@@ -53,7 +53,7 @@ impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
             };
             self.chunk_counter += 1;
             let mut decrypted_data = map_anyhow_io!(
-                core::decrypt_chunk(&buffer[..bytes_read].to_vec(),&self.key,&self.nonce),
+                core::decrypt_chunk::<Crypto>(&buffer[..bytes_read].to_vec(),&self.key,&self.nonce),
                 format!("Error decrypting chunk {}", self.chunk_counter)
             )?;
             self.buffer.append(&mut decrypted_data);
