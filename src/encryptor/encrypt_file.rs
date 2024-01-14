@@ -12,7 +12,7 @@ use crate::map_anyhow_io;
 
 
 pub struct EncryptedFileGenerator<'a, T> where T: Read {
-    source: EncryptedIterator<'a, T>,
+    source: EncryptedIterator<'a, T, Crypto>,
     header: EncryptionFileHeader,
     buffer: Vec<u8>,
     counter: u32,
@@ -20,7 +20,7 @@ pub struct EncryptedFileGenerator<'a, T> where T: Read {
 }
 
 impl<'a, T: Read> EncryptedFileGenerator<'a, T> {
-    fn new(iterator: EncryptedIterator<'a, T>, header: EncryptionFileHeader) -> Self {
+    fn new(iterator: EncryptedIterator<'a, T, Crypto>, header: EncryptionFileHeader) -> Self {
         return EncryptedFileGenerator {
             source: iterator,
             header,
