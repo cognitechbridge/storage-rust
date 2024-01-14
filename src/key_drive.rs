@@ -6,17 +6,17 @@ use anyhow::Result;
 use num_bigint::BigUint;
 use num_traits::ToPrimitive;
 
+use argon2::{Algorithm, Argon2, Params, Version};
+
 const MAX_ITERATION: u32 = 10000;
 
 pub type Key = GenericArray<u8, U32>;
 
 pub fn generate_key(root_key: &Key, context: &[u8]) -> Result<Key> {
-    let mut mac = Hmac::<Sha3_256>::new_from_slice(&root_key)?;
-    let iteration = BigUint::from_bytes_le(root_key) % MAX_ITERATION;
-    for _i in 0..iteration.to_u32().unwrap() {
-        mac.update(root_key);
-        mac.update(context);
-    }
-    let derived_key = mac.finalize().into_bytes();
-    return Ok(derived_key);
+    let mut derived_key = [0u8; 32];
+    let params = Params::new(1024 * 19, 2, 1, None).unwrap();
+    let x = Argon2::new(Algorithm::default(), Version::default(), params);
+    x.hash_password_into(root_key, context, &mut derived_key);
+
+    return Ok(Key::from(derived_key));
 }
