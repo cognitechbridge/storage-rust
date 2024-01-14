@@ -1,4 +1,4 @@
-use super::types::{Result, Key, Nonce};
+use super::types::{Result, Key, Nonce, Context};
 use super::{utils, core, ToPlainStream};
 
 use std::io::Read;
@@ -74,21 +74,36 @@ impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
 
 fn read_file_header(source: &mut impl Read) -> Result<()> {
     //Read file version
+    read_file_version(source)?;
+
+    //Read client id
+    read_context(source)?;
+
+    //Read file id
+    read_context(source)?;
+
+    return Ok(());
+}
+
+fn read_file_version(source: &mut (impl Read + Sized)) -> Result<()> {
     let mut buffer = [0u8; 1];
     source.read(&mut buffer)?;
     if buffer[0] != 1u8 {
         return Err(anyhow!("File version invalid"));
     }
+    return Ok(());
+}
 
+fn read_context(source: &mut (impl Read + Sized)) -> Result<Context> {
     //Read context size
-    source.read(&mut buffer)?;
-    let context_size = buffer[0];
+    let mut buffer_1 = [0u8; 1];
+    source.read(&mut buffer_1)?;
+    let context_size = buffer_1[0];
 
     //Read context
-    let mut buffer = vec![0; context_size as usize];
-    source.read(&mut buffer)?;
-
-    return Ok(());
+    let mut buffer_context = vec![0; context_size as usize];
+    source.read(&mut buffer_context)?;
+    Ok(buffer_context)
 }
 
 fn read_chunk_size(source: &mut impl Read) -> Result<usize> {

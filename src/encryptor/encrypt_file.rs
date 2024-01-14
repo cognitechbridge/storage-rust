@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 
-use super::types::{IdContext, Key};
+use super::types::{Context, Key};
 use super::constants::{ENCRYPTED_FILE_VERSION, HEADER_RESERVE_LENGTH, SEPARATOR};
 
 use super::encrypt_iterator::EncryptedIterator;
@@ -13,17 +13,19 @@ use crate::map_anyhow_io;
 
 pub struct EncryptedFileGenerator<'a, T> where T: Read {
     source: EncryptedIterator<'a, T>,
-    id_context: IdContext,
+    file_id_context: Context,
+    client_id_context: Context,
     buffer: Vec<u8>,
     counter: u32,
     chunk_size: usize,
 }
 
 impl<'a, T: Read> EncryptedFileGenerator<'a, T> {
-    fn new(iterator: EncryptedIterator<'a, T>, id_context: IdContext) -> Self {
+    fn new(iterator: EncryptedIterator<'a, T>, file_id_context: Context, client_id_context: Context) -> Self {
         return EncryptedFileGenerator {
             source: iterator,
-            id_context,
+            file_id_context,
+            client_id_context,
             buffer: vec![],
             counter: 0,
             chunk_size: 0,
@@ -69,11 +71,13 @@ impl<'a, T: Read> EncryptedFileGenerator<'a, T> {
         let mut file_version = vec![ENCRYPTED_FILE_VERSION];
         self.buffer.append(&mut file_version);
 
-        //Append id context
-        let mut context = self.id_context.clone();
-        let mut context_length = vec![context.len() as u8];
-        self.buffer.append(&mut context_length);
-        self.buffer.append(&mut context);
+        //Append client id context
+        let mut context = self.client_id_context.clone();
+        self.write_context(&mut context);
+
+        //Append file id context
+        let mut context = self.file_id_context.clone();
+        self.write_context(&mut context);
 
         //Append chunk size
         let mut size = [0u8; HEADER_RESERVE_LENGTH];
@@ -81,18 +85,31 @@ impl<'a, T: Read> EncryptedFileGenerator<'a, T> {
         size[..bytes.len()].copy_from_slice(&bytes);
         self.buffer.append(&mut size.to_vec());
     }
+
+    fn write_context(&mut self, mut context: &mut Vec<u8>) {
+        let mut context_length = vec![context.len() as u8];
+        self.buffer.append(&mut context_length);
+        self.buffer.append(&mut context);
+    }
 }
 
+
 impl<'a, T: Read> ToEncryptedStream<'a, EncryptedFileGenerator<'a, T>> for T {
-    fn to_encrypted_stream(self, key: &'a Key, id_context: impl ToString, chunk_size: usize)
-                           -> Result<EncryptedFileGenerator<'a, T>> {
-        let id_context_vec = id_context.to_string().into_bytes();
-        if id_context_vec.len() > 255 {
+    fn to_encrypted_stream(self,
+                           key: &'a Key,
+                           client_id_context: impl ToString,
+                           file_id_context: impl ToString, chunk_size: usize)
+                           -> Result<EncryptedFileGenerator<'a, T>>
+    {
+        let file_id_vec = file_id_context.to_string().into_bytes();
+        let client_id_vec = client_id_context.to_string().into_bytes();
+
+        if file_id_vec.len() > 255 {
             return Err(anyhow!("Invalid id context string length. It should be less than 255 bytes."));
         }
         let iterator = EncryptedIterator::new(self, key, chunk_size);
 
-        return Ok(EncryptedFileGenerator::new(iterator, id_context_vec));
+        return Ok(EncryptedFileGenerator::new(iterator, file_id_vec, client_id_vec));
     }
 }
 

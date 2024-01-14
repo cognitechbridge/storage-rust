@@ -32,13 +32,14 @@ async fn main() {
     for i in 0..key.len() {
         key[i] = i as u8;
     }
-    let my_uuid = Uuid::new_v7(Timestamp::now(NoContext));
-    let x = generate_key(&key, my_uuid.as_bytes()).unwrap();
-    println!("Derived 1:{:x?}", x);
 
-    let my_uuid = Uuid::new_v7(Timestamp::now(NoContext));
-    let x = generate_key(&key, my_uuid.as_bytes()).unwrap();
-    println!("Derived 2:{:x?}", x);
+    let client_uuid = Uuid::new_v4();
+    let client_key = generate_key(&key, client_uuid.as_bytes()).unwrap();
+    println!("Derived Client:{:x?}", client_key);
+
+    let file_uuid = Uuid::new_v7(Timestamp::now(NoContext));
+    let file_key = generate_key(&client_key, file_uuid.as_bytes()).unwrap();
+    println!("Derived File:{:x?}", file_key);
 
     // ************************ Generate Sample file *****************************
 
@@ -60,35 +61,35 @@ async fn main() {
 
     // ************************ Upload *****************************
 
-    // let mut reader = File::open("D:\\Sample.txt")
-    //     .unwrap()
-    //     .to_encrypted_stream(&key, uuid, CHUNK_SIZE as usize).unwrap();
-    //
-    // storage.upload(&mut reader, uuid.to_string()).await.unwrap();
+    let mut reader = File::open("D:\\Sample.txt")
+        .unwrap()
+        .to_encrypted_stream(&key, "client-id", uuid, CHUNK_SIZE as usize).unwrap();
+
+    storage.upload(&mut reader, uuid.to_string()).await.unwrap();
 
 
     // ************************ Download *****************************
 
-    // let download_file_path = "D:\\Sample-Encrypted.txt";
-    // let decrypt_file_path = "D:\\Sample-UnEncrypted.txt";
-    //
-    // let mut file = File::create(download_file_path).unwrap();
-    // storage.download(&mut file, uuid.to_string()).await.unwrap();
-    //
-    // let mut file = File::open(download_file_path).unwrap().to_plain_stream(&key);
-    // let mut output_file = File::create(decrypt_file_path).unwrap();
-    // let mut buffer = vec![0; 1024 * 1024 * 100];
-    // loop {
-    //     // Read up to 1KB from the input file
-    //     let bytes_read = file.read(&mut buffer).unwrap();
-    //
-    //     // If no bytes were read, end of file is reached
-    //     if bytes_read == 0 {
-    //         break;
-    //     }
-    //
-    //     // Write the bytes to the output file
-    //     output_file.write_all(&buffer[..bytes_read]).unwrap();
-    // }
+    let download_file_path = "D:\\Sample-Encrypted.txt";
+    let decrypt_file_path = "D:\\Sample-UnEncrypted.txt";
+
+    let mut file = File::create(download_file_path).unwrap();
+    storage.download(&mut file, uuid.to_string()).await.unwrap();
+
+    let mut file = File::open(download_file_path).unwrap().to_plain_stream(&key);
+    let mut output_file = File::create(decrypt_file_path).unwrap();
+    let mut buffer = vec![0; 1024 * 1024 * 100];
+    loop {
+        // Read up to 1KB from the input file
+        let bytes_read = file.read(&mut buffer).unwrap();
+
+        // If no bytes were read, end of file is reached
+        if bytes_read == 0 {
+            break;
+        }
+
+        // Write the bytes to the output file
+        output_file.write_all(&buffer[..bytes_read]).unwrap();
+    }
 }
 
