@@ -66,7 +66,7 @@ async fn main() {
     };
     let mut reader = File::open("D:\\Sample.txt")
         .unwrap()
-        .to_encrypted_stream(&key, header).unwrap();
+        .to_encrypted_stream::<Crypto>(&key, header).unwrap();
 
 
     // let mut output_file = File::create("D:\\Test.txt").unwrap();

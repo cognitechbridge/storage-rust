@@ -1,5 +1,3 @@
-use anyhow::{anyhow, Result};
-
 use super::types::*;
 use super::constants::*;
 
@@ -7,20 +5,21 @@ use super::encrypt_iterator::EncryptedIterator;
 use super::{ToEncryptedStream};
 
 use std::io::Read;
-use num_bigint::{BigUint};
+use aead::Aead;
+use crypto_common::{KeyInit, KeySizeUser};
 use crate::map_anyhow_io;
 
 
-pub struct EncryptedFileGenerator<'a, T> where T: Read {
-    source: EncryptedIterator<'a, T, Crypto>,
+pub struct EncryptedFileGenerator<I> where I: Iterator<Item=Result<Vec<u8>>> {
+    source: I,
     header: EncryptionFileHeader,
     buffer: Vec<u8>,
     counter: u32,
     chunk_size: usize,
 }
 
-impl<'a, T: Read> EncryptedFileGenerator<'a, T> {
-    fn new(iterator: EncryptedIterator<'a, T, Crypto>, header: EncryptionFileHeader) -> Self {
+impl<I> EncryptedFileGenerator<I> where I: Iterator<Item=Result<Vec<u8>>> {
+    fn new<T: Read, C: KeySizeUser + KeyInit + Aead>(iterator: I, header: EncryptionFileHeader) -> Self {
         return EncryptedFileGenerator {
             source: iterator,
             header,
@@ -31,7 +30,7 @@ impl<'a, T: Read> EncryptedFileGenerator<'a, T> {
     }
 }
 
-impl<'a, T: Read> Read for EncryptedFileGenerator<'a, T> {
+impl<I> Read for EncryptedFileGenerator<I> where I: Iterator<Item=Result<Vec<u8>>> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         while self.buffer.len() < buf.len() {
             match self.source.next() {
@@ -63,7 +62,7 @@ impl<'a, T: Read> Read for EncryptedFileGenerator<'a, T> {
     }
 }
 
-impl<'a, T: Read> EncryptedFileGenerator<'a, T> {
+impl<I> EncryptedFileGenerator<I> where I: Iterator<Item=Result<Vec<u8>>> {
     fn append_header(&mut self) {
         //Append file version
         let mut file_version = vec![ENCRYPTED_FILE_VERSION];
@@ -82,12 +81,13 @@ impl<'a, T: Read> EncryptedFileGenerator<'a, T> {
 }
 
 
-impl<'a, T: Read> ToEncryptedStream<'a, EncryptedFileGenerator<'a, T>> for T {
-    fn to_encrypted_stream(self, key: &'a Key, header: EncryptionFileHeader) -> Result<EncryptedFileGenerator<'a, T>>
+impl<T: Read> ToEncryptedStream<T> for T {
+    type Output<'a, C: KeySizeUser + KeyInit + Aead> = EncryptedFileGenerator<EncryptedIterator<'a, T, C>>;
+    fn to_encrypted_stream<C: KeySizeUser + KeyInit + Aead>(self, key: &TKey<C>, header: EncryptionFileHeader) ->
+    Result<Self::Output<'_, C>>
     {
         let iterator = EncryptedIterator::new(self, key, header.chunk_size as usize);
-
-        return Ok(EncryptedFileGenerator::new(iterator, header));
+        return Ok(EncryptedFileGenerator::new::<T, C>(iterator, header));
     }
 }
 

@@ -1,12 +1,10 @@
-use std::default;
-use super::types::{Key, Nonce, Result};
-use super::{utils, core, TKey, TNonce};
+use super::types::*;
+use super::{utils, core};
 
 use std::io::Read;
 use aead::Aead;
 use anyhow::anyhow;
 use crypto_common::{KeyInit, KeySizeUser};
-
 
 pub struct EncryptedIterator<'a, T, C> where T: Read, C: KeySizeUser + KeyInit + Aead {
     source: T,

@@ -1,4 +1,6 @@
 use std::io::Read;
+use aead::Aead;
+use crypto_common::{InnerUser, KeyInit, KeySizeUser};
 use serde::{Deserialize, Serialize};
 
 pub use types::*;
@@ -13,8 +15,10 @@ pub mod types;
 mod file_header;
 
 
-pub trait ToEncryptedStream<'a, Y> where Y: Read {
-    fn to_encrypted_stream(self, key: &'a Key, header: EncryptionFileHeader) -> Result<Y>;
+pub trait ToEncryptedStream<T: Read> {
+    type Output<'a, C: KeySizeUser + KeyInit + Aead>: Read;
+    fn to_encrypted_stream<C: KeySizeUser + KeyInit + Aead>(self, key: &TKey<C>, header: EncryptionFileHeader) ->
+    Result<Self::Output<'_, C>>;
 }
 
 pub trait ToPlainStream<'a, Y> where Y: Read {
