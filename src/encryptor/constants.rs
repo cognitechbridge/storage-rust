@@ -1,5 +1,3 @@
-use aead::consts::U16;
-use crypto_common::typenum::Unsigned;
 use super::types::*;
 
 pub const SEPARATOR_LENGTH: usize = 4;

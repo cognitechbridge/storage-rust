@@ -7,7 +7,6 @@ use aead::{Nonce as TNonce};
 use chacha20poly1305::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
 };
-use generic_array::sequence::Lengthen;
 
 pub type Crypto = chacha20poly1305::XChaCha20Poly1305;
 pub type Key = TKey<Crypto>;
