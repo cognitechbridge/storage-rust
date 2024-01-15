@@ -16,8 +16,7 @@ use aead::consts::U32;
 use crypto_common::KeySizeUser;
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
-use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader};
-use crate::encryptor::generate_key_recover_blob;
+use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader, DataKeyRecoveryGenerator};
 use crate::keystore::KeyStore;
 use crate::storage::*;
 
@@ -68,10 +67,9 @@ async fn main() {
 
     // ************************ Upload *****************************
 
-    let recover_blob = generate_key_recover_blob::<XChaCha20Poly1305, ChaCha20Poly1305>(
-        &key,
-        &key,
-    ).unwrap();
+    let recover_blob = DataKeyRecoveryGenerator::<XChaCha20Poly1305>::new(&key)
+        .with_uuid(&key, &uuid)
+        .unwrap();
     let header = EncryptionFileHeader {
         client_id: "client-id".to_string(),
         file_id: uuid.to_string(),
