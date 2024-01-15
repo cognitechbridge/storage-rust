@@ -11,6 +11,9 @@ use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, ChaCh
 
 use std::fs::File;
 use std::io::{Read, Write};
+use aead::AeadCore;
+use aead::consts::U32;
+use crypto_common::KeySizeUser;
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
 use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader};
@@ -18,6 +21,7 @@ use crate::encryptor::generate_key_recover_blob;
 use crate::keystore::KeyStore;
 use crate::storage::*;
 
+type KeySize = <Crypto as KeySizeUser>::KeySize;
 
 const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 
@@ -31,16 +35,14 @@ async fn main() {
         key[i] = i as u8;
     }
 
-    let mut store = KeyStore { x: Default::default() };
-    store.insert("Hi".to_string(), key);
-    store.insert("Hi1".to_string(), key);
-    store.insert("Hi2".to_string(), key);
+    let mut store = KeyStore::new(key);
+    store.generate_store_key("Test", OsRng);
 
-    let s = serde_json::to_string(&store).unwrap();
-    println!("{}",s);
+    let s = store.serialize().unwrap();
+    println!("{}", s);
 
-    let store: KeyStore = serde_json::from_str(&s).unwrap();
-    println!("{:?}",store);
+    let store: KeyStore<KeySize> = KeyStore::from_serialized(&s).unwrap();
+    println!("{:?}", store);
 
 
     // let x = type_name_of::<ChaCha20Poly1305>().unwrap();
