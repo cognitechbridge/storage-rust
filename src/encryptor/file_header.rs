@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use serde::{Deserialize, Serialize};
-use crate::encryptor::utils::type_name_of;
+use crate::utils::type_name_of;
 use super::constants::*;
 
 #[derive(Serialize, Deserialize)]

@@ -5,19 +5,19 @@ mod encryptor;
 mod macros;
 mod storage;
 mod keystore;
+mod utils;
 
 
-use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, ChaCha20Poly1305, XChaCha20Poly1305};
+use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, XChaCha20Poly1305};
 
 use std::fs::File;
 use std::io::{Read, Write};
 use aead::AeadCore;
-use aead::consts::U32;
 use crypto_common::KeySizeUser;
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
-use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader, DataKeyRecoveryGenerator};
-use crate::keystore::KeyStore;
+use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader};
+use crate::keystore::{DataKeyRecoveryGenerator, KeyStore};
 use crate::storage::*;
 
 type KeySize = <Crypto as KeySizeUser>::KeySize;

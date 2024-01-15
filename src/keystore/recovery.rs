@@ -1,5 +1,6 @@
+use crate::utils::*;
+
 use aead::{Aead, OsRng};
-use super::utils::*;
 
 use anyhow::{bail, Result};
 use crypto_common::{Key as TKey, KeyInit, KeySizeUser};
@@ -8,7 +9,8 @@ use serde::{Serialize, Deserialize};
 use base64::prelude::*;
 use generic_array::{ArrayLength, GenericArray};
 use uuid::Uuid;
-use crate::encryptor::TNonce;
+pub use aead::Nonce;
+
 
 type Key<N> = GenericArray<u8, N>;
 
@@ -39,7 +41,7 @@ impl<'a, C> DataKeyRecoveryGenerator<'a, C> where C: KeySizeUser + KeyInit + Aea
     pub fn with_nonce<N: ArrayLength<u8>>(
         &self,
         key: &Key<N>,
-        nonce: TNonce<C>,
+        nonce: Nonce<C>,
     ) -> Result<String> {
         let cipher = C::new(self.root_key);
         let cipher_result = cipher.encrypt(&nonce, key.as_ref())
@@ -61,11 +63,12 @@ impl<'a, C> DataKeyRecoveryGenerator<'a, C> where C: KeySizeUser + KeyInit + Aea
         key: &Key<N>,
         uuid: &Uuid,
     ) -> Result<String> {
-        let mut nonce: TNonce<C> = Default::default();
+        let mut nonce: Nonce<C> = Default::default();
         nonce[..16].copy_from_slice(uuid.as_bytes());
         self.with_nonce(key, nonce)
     }
 
+    #[allow(dead_code)]
     pub fn with_rand<N: ArrayLength<u8>>(
         &self,
         key: &Key<N>,

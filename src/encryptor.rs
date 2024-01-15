@@ -11,10 +11,7 @@ mod core;
 mod constants;
 pub mod types;
 mod file_header;
-mod recovery;
 
-
-pub use recovery::*;
 
 pub trait ToEncryptedStream<T: Read> {
     type Output<'a, C: KeySizeUser + KeyInit + Aead>: Read;
