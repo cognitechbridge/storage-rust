@@ -7,13 +7,11 @@ mod key_drive;
 
 use chacha20poly1305::{
     aead::{KeyInit, OsRng},
-    ChaCha20Poly1305,
+    ChaCha20Poly1305 as Crypto,
 };
 
 use std::fs::File;
-use encryptor::types::Crypto;
 use std::io::{Read, Write};
-use aead::AeadCore;
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
 use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader};
@@ -55,7 +53,7 @@ async fn main() {
 
     // ************************ Upload *****************************
 
-    let x = std::any::type_name::<ChaCha20Poly1305>();
+    let x = std::any::type_name::<Crypto>();
     println!("{}", x);
 
     let header = EncryptionFileHeader {
@@ -97,7 +95,7 @@ async fn main() {
     let mut file = File::create(download_file_path).unwrap();
     storage.download(&mut file, uuid.to_string()).await.unwrap();
 
-    let mut file = File::open(download_file_path).unwrap().to_plain_stream(&key);
+    let mut file = File::open(download_file_path).unwrap().to_plain_stream::<Crypto>(&key);
     let mut output_file = File::create(decrypt_file_path).unwrap();
     let mut buffer = vec![0; 1024 * 1024 * 100];
     loop {

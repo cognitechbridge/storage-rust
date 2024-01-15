@@ -3,27 +3,29 @@ use super::constants::*;
 use super::{utils, core, ToPlainStream};
 
 use std::io::Read;
-use aead::AeadCore;
+use aead::{Aead, AeadCore};
 use anyhow::{anyhow, bail};
+use crypto_common::{KeyInit, KeySizeUser};
 use crate::map_anyhow_io;
 
 use generic_array::typenum::Unsigned;
 
-pub struct ReaderDecryptor<'a, T> where T: Read {
+pub struct ReaderDecryptor<'a, T, C> where T: Read, C: KeySizeUser + KeyInit + Aead {
     source: T,
-    key: &'a Key,
-    nonce: Nonce,
+    key: &'a TKey<C>,
+    nonce: TNonce<C>,
     buffer: Vec<u8>,
     chunk_size: usize,
     chunk_counter: usize,
 }
 
-impl<'a, T: Read> ToPlainStream<'a, ReaderDecryptor<'a, T>> for T {
-    fn to_plain_stream(self, key: &'a Key) -> ReaderDecryptor<'a, T> {
+impl<T: Read> ToPlainStream<T> for T {
+    type Output<'a, C: KeySizeUser + KeyInit + Aead> = ReaderDecryptor<'a, T, C>;
+    fn to_plain_stream<C: KeySizeUser + KeyInit + Aead>(self, key: &TKey<C>) -> Self::Output<'_, C> {
         return ReaderDecryptor {
             source: self,
             key,
-            nonce: Nonce::default(),
+            nonce: Default::default(),
             buffer: vec![],
             chunk_size: 0,
             chunk_counter: 0,
@@ -31,14 +33,14 @@ impl<'a, T: Read> ToPlainStream<'a, ReaderDecryptor<'a, T>> for T {
     }
 }
 
-impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
+impl<'a, T, C> Read for ReaderDecryptor<'a, T, C> where T: Read, C: KeySizeUser + KeyInit + Aead {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.chunk_size == 0 {
             let header = map_anyhow_io!(
                 read_file_header(&mut self.source),
                 "Error reading file header"
             )?;
-            self.chunk_size = header.chunk_size as usize + <Crypto as AeadCore>::TagSize::to_usize();
+            self.chunk_size = header.chunk_size as usize + <C as AeadCore>::TagSize::to_usize();
         }
         while self.buffer.len() < buf.len() {
             map_anyhow_io!(
@@ -53,7 +55,7 @@ impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
             };
             self.chunk_counter += 1;
             let mut decrypted_data = map_anyhow_io!(
-                core::decrypt_chunk::<Crypto>(&buffer[..bytes_read].to_vec(),&self.key,&self.nonce),
+                core::decrypt_chunk::<C>(&buffer[..bytes_read].to_vec(),&self.key,&self.nonce),
                 format!("Error decrypting chunk {}", self.chunk_counter)
             )?;
             self.buffer.append(&mut decrypted_data);
