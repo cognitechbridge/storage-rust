@@ -8,7 +8,7 @@ mod keystore;
 mod utils;
 
 
-use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, XChaCha20Poly1305};
+use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, ChaCha20Poly1305, XChaCha20Poly1305};
 
 use std::fs::File;
 use std::io::{Read, Write};
@@ -36,8 +36,8 @@ async fn main() {
 
     let mut store = KeyStore::new(key);
     let uuid = Uuid::new_v7(Timestamp::now(NoContext));
-    let x = store.generate_stored_key(&uuid, OsRng).unwrap();
-
+    let x = store.generate_stored_key::<XChaCha20Poly1305>(&uuid, OsRng).unwrap();
+    println!("{:?}", x);
     let s = store.serialize().unwrap();
     println!("{}", s);
 
