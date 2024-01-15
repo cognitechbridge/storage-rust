@@ -101,7 +101,10 @@ fn read_header<C>(source: &mut (impl Read + Sized)) -> Result<EncryptionFileHead
     let mut buffer_context = vec![0; context_size as usize];
     source.read(&mut buffer_context)?;
 
-    let file_header = serde_json::from_slice(buffer_context.as_slice()).unwrap();
+    let file_header = map_anyhow_io!(
+        serde_json::from_slice(buffer_context.as_slice()),
+        "Error deserializing file header"
+    )?;
 
     Ok(file_header)
 }

@@ -24,7 +24,7 @@ impl<C> Default for EncryptionFileHeader<C> {
     fn default() -> EncryptionFileHeader<C> {
         EncryptionFileHeader {
             version: EncryptionFileHeaderVersion::V1,
-            alg: type_name_of::<C>(),
+            alg: type_name_of::<C>().unwrap_or_default(),
             chunk_size: DEFAULT_CHUNK_SIZE,
             client_id: "".to_string(),
             file_id: "".to_string(),

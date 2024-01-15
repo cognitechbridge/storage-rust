@@ -8,6 +8,7 @@ use crypto_common::{Key as TKey, KeyInit, KeySizeUser};
 use serde::{Serialize, Deserialize};
 
 use base64::prelude::*;
+use crate::map_anyhow_io;
 
 
 #[derive(Serialize, Deserialize)]
@@ -33,11 +34,12 @@ pub fn generate_key_recover_blob<C: KeySizeUser + KeyInit + Aead, DC: KeySizeUse
         .or_else(|_x| bail!("Encryption error"))?;
     let x = Recovery {
         version: RecoveryVersion::V1,
-        alg: type_name_of::<C>(),
+        alg: type_name_of::<C>()?,
         nonce: BASE64_STANDARD.encode(nonce).to_string(),
         cipher: BASE64_STANDARD.encode(cipher_result).to_string(),
     };
-    let serialized = serde_json::to_string(&x).unwrap();
+    let serialized = serde_json::to_string(&x)?;
+
     let blob = BASE64_STANDARD.encode(serialized.as_bytes());
     return Ok(blob);
 }

@@ -38,7 +38,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + 
 impl<'a, R, C> Read for EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyInit + Aead {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.chunk_counter == 0 {
-            self.append_header();
+            map_anyhow_io!(self.append_header(),"Error appending header")?;
         }
         while self.buffer.len() < buf.len() {
             match self.read_bytes_encrypted() {
@@ -68,14 +68,15 @@ impl<'a, R, C> Read for EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySi
 }
 
 impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyInit + Aead {
-    fn append_header(&mut self) {
+    fn append_header(&mut self) -> Result<()> {
         //Append file version
         let mut file_version = vec![ENCRYPTED_FILE_VERSION];
         self.buffer.append(&mut file_version);
 
         //Append header
-        let mut header = serde_json::to_string(&self.header).unwrap().to_string();
+        let mut header = serde_json::to_string(&self.header)?.to_string();
         self.write_context(&mut header);
+        return Ok(());
     }
 
     fn write_context(&mut self, context: &mut String) {
