@@ -1,5 +1,6 @@
 mod serializable;
 mod recovery;
+mod generate_key;
 
 pub use recovery::DataKeyRecoveryGenerator;
 
@@ -41,13 +42,6 @@ impl<N: ArrayLength<u8>> KeyStore<N> {
     pub fn generate_key(mut rng: impl CryptoRng + RngCore) -> Key<N> {
         let mut key = Key::<N>::default();
         rng.fill_bytes(&mut key);
-        key
-    }
-
-    #[allow(dead_code)]
-    pub fn generate_store_key(&mut self, key_id: &str, rng: impl CryptoRng + RngCore) -> Key<N> {
-        let key = Self::generate_key(rng);
-        self.insert(key_id, key.clone());
         key
     }
 

@@ -35,7 +35,8 @@ async fn main() {
     }
 
     let mut store = KeyStore::new(key);
-    store.generate_store_key("Test", OsRng);
+    let uuid = Uuid::new_v7(Timestamp::now(NoContext));
+    let x = store.generate_stored_key(&uuid, OsRng).unwrap();
 
     let s = store.serialize().unwrap();
     println!("{}", s);
