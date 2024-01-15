@@ -2,20 +2,16 @@ mod encryptor;
 #[macro_use]
 mod macros;
 mod storage;
-mod key_drive;
 
 
-use chacha20poly1305::{
-    aead::{KeyInit, OsRng},
-    ChaCha20Poly1305 as Crypto,
-};
+use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, ChaCha20Poly1305, XChaCha20Poly1305};
 
 use std::fs::File;
 use std::io::{Read, Write};
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
 use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader};
-use crate::key_drive::generate_key_recover_blob;
+use crate::encryptor::generate_key_recover_blob;
 use crate::storage::*;
 
 
@@ -31,7 +27,10 @@ async fn main() {
         key[i] = i as u8;
     }
 
-    generate_key_recover_blob(&key, &Crypto::generate_key(&mut OsRng));
+    generate_key_recover_blob::<XChaCha20Poly1305, ChaCha20Poly1305>(&key, &Crypto::generate_key(&mut OsRng));
+
+    // let x = type_name_of::<ChaCha20Poly1305>().unwrap();
+    // println!("{}", x);
 
     // ************************ Generate Sample file *****************************
 
@@ -52,9 +51,6 @@ async fn main() {
     let uuid = Uuid::new_v7(Timestamp::now(NoContext));
 
     // ************************ Upload *****************************
-
-    let x = std::any::type_name::<Crypto>();
-    println!("{}", x);
 
     let header = EncryptionFileHeader {
         client_id: "client-id".to_string(),
@@ -110,5 +106,6 @@ async fn main() {
         // Write the bytes to the output file
         output_file.write_all(&buffer[..bytes_read]).unwrap();
     }
+
 }
 

@@ -1,7 +1,7 @@
+use super::utils::*;
+
 use anyhow::{bail, Result};
-use crypto_common::{
-    Key as TKey
-};
+use crypto_common::{Key as TKey, KeySizeUser};
 use aead::{Nonce as TNonce};
 
 use chacha20poly1305::{
@@ -18,19 +18,29 @@ use base64::prelude::*;
 
 
 #[derive(Serialize, Deserialize)]
+pub enum RecoveryVersion {
+    V1
+}
+
+
+#[derive(Serialize, Deserialize)]
 pub struct Recovery {
+    pub version: RecoveryVersion,
     pub alg: String,
     pub nonce: String,
     pub cipher: String,
 }
 
-pub fn generate_key_recover_blob(root_key: &Key, key: &Key) -> Result<Vec<u8>> {
-    let nonce = Crypto::generate_nonce(&mut OsRng);
-    let cipher = Crypto::new(&root_key);
+pub fn generate_key_recover_blob<C: KeySizeUser + KeyInit + Aead, DC: KeySizeUser>(
+    root_key: &TKey<C>, key: &TKey<DC>,
+) -> Result<Vec<u8>> {
+    let nonce = C::generate_nonce(&mut OsRng);
+    let cipher = C::new(&root_key);
     let cipher_result = cipher.encrypt(&nonce, key.as_ref())
         .or_else(|_x| bail!("Encryption error"))?;
     let x = Recovery {
-        alg: "XChaCha20Poly1305".to_string(),
+        version: RecoveryVersion::V1,
+        alg: type_name_of::<C>(),
         nonce: BASE64_STANDARD.encode(nonce).to_string(),
         cipher: BASE64_STANDARD.encode(cipher_result).to_string(),
     };
