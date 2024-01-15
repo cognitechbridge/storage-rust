@@ -1,7 +1,10 @@
+extern crate core;
+
 mod encryptor;
 #[macro_use]
 mod macros;
 mod storage;
+mod keystore;
 
 
 use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, ChaCha20Poly1305, XChaCha20Poly1305};
@@ -12,6 +15,7 @@ use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
 use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader};
 use crate::encryptor::generate_key_recover_blob;
+use crate::keystore::KeyStore;
 use crate::storage::*;
 
 
@@ -26,6 +30,17 @@ async fn main() {
     for i in 0..key.len() {
         key[i] = i as u8;
     }
+
+    let mut store = KeyStore { x: Default::default() };
+    store.insert("Hi".to_string(), key);
+    store.insert("Hi1".to_string(), key);
+    store.insert("Hi2".to_string(), key);
+
+    let s = serde_json::to_string(&store).unwrap();
+    println!("{}",s);
+
+    let store: KeyStore = serde_json::from_str(&s).unwrap();
+    println!("{:?}",store);
 
 
     // let x = type_name_of::<ChaCha20Poly1305>().unwrap();
