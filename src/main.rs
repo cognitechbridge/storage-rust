@@ -27,7 +27,6 @@ async fn main() {
         key[i] = i as u8;
     }
 
-    generate_key_recover_blob::<XChaCha20Poly1305, ChaCha20Poly1305>(&key, &Crypto::generate_key(&mut OsRng));
 
     // let x = type_name_of::<ChaCha20Poly1305>().unwrap();
     // println!("{}", x);
@@ -52,10 +51,14 @@ async fn main() {
 
     // ************************ Upload *****************************
 
+    let recover_blob = generate_key_recover_blob::<XChaCha20Poly1305, ChaCha20Poly1305>(
+        &key,
+        &key,
+    ).unwrap();
     let header = EncryptionFileHeader {
         client_id: "client-id".to_string(),
         file_id: uuid.to_string(),
-        recovery: "".to_string(),
+        recovery: recover_blob,
         chunk_size: 10,
         ..Default::default()
     };
@@ -106,6 +109,5 @@ async fn main() {
         // Write the bytes to the output file
         output_file.write_all(&buffer[..bytes_read]).unwrap();
     }
-
 }
 

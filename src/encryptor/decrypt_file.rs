@@ -37,7 +37,7 @@ impl<'a, T, C> Read for ReaderDecryptor<'a, T, C> where T: Read, C: KeySizeUser 
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.chunk_size == 0 {
             let header = map_anyhow_io!(
-                read_file_header(&mut self.source),
+                read_file_header::<C>(&mut self.source),
                 "Error reading file header"
             )?;
             self.chunk_size = header.chunk_size as usize + <C as AeadCore>::TagSize::to_usize();
@@ -72,7 +72,7 @@ impl<'a, T, C> Read for ReaderDecryptor<'a, T, C> where T: Read, C: KeySizeUser 
     }
 }
 
-fn read_file_header(source: &mut impl Read) -> Result<EncryptionFileHeader> {
+fn read_file_header<C>(source: &mut impl Read) -> Result<EncryptionFileHeader<C>> {
     //Read file version
     read_file_version(source)?;
 
@@ -91,7 +91,7 @@ fn read_file_version(source: &mut (impl Read + Sized)) -> Result<()> {
     return Ok(());
 }
 
-fn read_header(source: &mut (impl Read + Sized)) -> Result<EncryptionFileHeader> {
+fn read_header<C>(source: &mut (impl Read + Sized)) -> Result<EncryptionFileHeader<C>> {
     //Read context size
     let mut buffer_2 = [0u8; 2];
     source.read(&mut buffer_2)?;

@@ -13,7 +13,7 @@ pub fn increase_bytes_le<T>(nonce: &mut GenericArray<u8, T>) where T: ArrayLengt
 
 pub fn type_name_of<T>() -> String {
     let full_name = std::any::type_name::<T>();
-    let re = Regex::new(r"^([a-zA-Z0-9_]+)::").unwrap();
+    let re = Regex::new(r"::([a-zA-Z0-9_]+)").unwrap();
     let res = re.captures(full_name)
         .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
     return res.unwrap_or_default();

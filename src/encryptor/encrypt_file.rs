@@ -12,7 +12,7 @@ use crate::map_anyhow_io;
 
 pub struct EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyInit + Aead {
     source: R,
-    header: EncryptionFileHeader,
+    header: EncryptionFileHeader<C>,
     key: &'a TKey<C>,
     buffer: Vec<u8>,
     nonce: TNonce<C>,
@@ -21,7 +21,7 @@ pub struct EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyI
 }
 
 impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyInit + Aead {
-    fn new<T: Read>(source: R, key: &'a TKey<C>, header: EncryptionFileHeader) -> Self {
+    fn new<T: Read>(source: R, key: &'a TKey<C>, header: EncryptionFileHeader<C>) -> Self {
         let chunk_size = header.chunk_size;
         return EncryptedFileGenerator {
             source,
@@ -90,7 +90,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + 
         let ret = match res {
             Ok(count) => {
                 if count > 0 {
-                    Some(crate::encryptor::core::encrypt_chunk::<C>(&buffer[..count].to_vec(), self.key, &self.nonce))
+                    Some(super::core::encrypt_chunk::<C>(&buffer[..count].to_vec(), self.key, &self.nonce))
                 } else {
                     None
                 }
@@ -104,7 +104,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + 
 
 impl<T: Read> ToEncryptedStream<T> for T {
     type Output<'a, C: KeySizeUser + KeyInit + Aead> = EncryptedFileGenerator<'a, T, C>;
-    fn to_encrypted_stream<C: KeySizeUser + KeyInit + Aead>(self, key: &TKey<C>, header: EncryptionFileHeader) ->
+    fn to_encrypted_stream<C: KeySizeUser + KeyInit + Aead>(self, key: &TKey<C>, header: EncryptionFileHeader<C>) ->
     Result<Self::Output<'_, C>>
     {
         return Ok(EncryptedFileGenerator::new::<T>(self, key, header));

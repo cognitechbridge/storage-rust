@@ -1,16 +1,9 @@
+use aead::{Aead, OsRng};
 use super::utils::*;
 
 use anyhow::{bail, Result};
-use crypto_common::{Key as TKey, KeySizeUser};
-use aead::{Nonce as TNonce};
+use crypto_common::{Key as TKey, KeyInit, KeySizeUser};
 
-use chacha20poly1305::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
-};
-
-pub type Crypto = chacha20poly1305::XChaCha20Poly1305;
-pub type Key = TKey<Crypto>;
-pub type Nonce = TNonce<Crypto>;
 
 use serde::{Serialize, Deserialize};
 
@@ -33,7 +26,7 @@ pub struct Recovery {
 
 pub fn generate_key_recover_blob<C: KeySizeUser + KeyInit + Aead, DC: KeySizeUser>(
     root_key: &TKey<C>, key: &TKey<DC>,
-) -> Result<Vec<u8>> {
+) -> Result<String> {
     let nonce = C::generate_nonce(&mut OsRng);
     let cipher = C::new(&root_key);
     let cipher_result = cipher.encrypt(&nonce, key.as_ref())
@@ -46,5 +39,5 @@ pub fn generate_key_recover_blob<C: KeySizeUser + KeyInit + Aead, DC: KeySizeUse
     };
     let serialized = serde_json::to_string(&x).unwrap();
     let blob = BASE64_STANDARD.encode(serialized.as_bytes());
-    return Ok(blob.as_bytes().to_vec());
+    return Ok(blob);
 }

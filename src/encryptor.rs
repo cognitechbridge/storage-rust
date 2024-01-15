@@ -18,7 +18,7 @@ pub use recovery::generate_key_recover_blob;
 
 pub trait ToEncryptedStream<T: Read> {
     type Output<'a, C: KeySizeUser + KeyInit + Aead>: Read;
-    fn to_encrypted_stream<C: KeySizeUser + KeyInit + Aead>(self, key: &TKey<C>, header: EncryptionFileHeader) ->
+    fn to_encrypted_stream<C: KeySizeUser + KeyInit + Aead>(self, key: &TKey<C>, header: EncryptionFileHeader<C>) ->
     Result<Self::Output<'_, C>>;
 }
 
