@@ -37,6 +37,9 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + 
 
 impl<'a, R, C> Read for EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyInit + Aead {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.counter == 0 {
+            self.append_header();
+        }
         while self.buffer.len() < buf.len() {
             match self.read_bytes_encrypted() {
                 Some(result) => {
@@ -44,16 +47,12 @@ impl<'a, R, C> Read for EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySi
                         result,
                         format!("Error encrypting chunk {}", self.counter + 1)
                     )?;
-                    if self.counter == 0 {
-                        self.chunk_size = r.len();
-                        self.append_header();
-                    }
                     self.buffer.append(&mut SEPARATOR.to_vec());
-                    self.counter += 1;
                     self.buffer.append(&mut r);
                 }
                 None => break,
             }
+            self.counter += 1;
             utils::increase_bytes_le(&mut self.nonce);
         }
 

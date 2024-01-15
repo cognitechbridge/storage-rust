@@ -38,7 +38,7 @@ impl<'a, T> Read for ReaderDecryptor<'a, T> where T: Read {
                 read_file_header(&mut self.source),
                 "Error reading file header"
             )?;
-            self.chunk_size = header.chunk_size as usize + <Crypto as AeadCore>::NonceSize::to_usize();
+            self.chunk_size = header.chunk_size as usize + <Crypto as AeadCore>::TagSize::to_usize();
         }
         while self.buffer.len() < buf.len() {
             map_anyhow_io!(
