@@ -62,6 +62,7 @@ async fn main() {
         client_id: "client-id".to_string(),
         file_id: uuid.to_string(),
         recovery: "".to_string(),
+        chunk_size: 10,
         ..Default::default()
     };
     let mut reader = File::open("D:\\Sample.txt")

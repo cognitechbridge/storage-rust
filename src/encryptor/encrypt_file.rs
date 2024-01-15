@@ -13,10 +13,10 @@ use crate::map_anyhow_io;
 pub struct EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyInit + Aead {
     source: R,
     header: EncryptionFileHeader,
-    buffer: Vec<u8>,
-    counter: u32,
     key: &'a TKey<C>,
+    buffer: Vec<u8>,
     nonce: TNonce<C>,
+    chunk_counter: u32,
     chunk_size: usize,
 }
 
@@ -27,7 +27,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + 
             source,
             header,
             buffer: vec![],
-            counter: 0,
+            chunk_counter: 0,
             key,
             nonce: Default::default(),
             chunk_size: chunk_size as usize,
@@ -37,7 +37,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + 
 
 impl<'a, R, C> Read for EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyInit + Aead {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        if self.counter == 0 {
+        if self.chunk_counter == 0 {
             self.append_header();
         }
         while self.buffer.len() < buf.len() {
@@ -45,14 +45,14 @@ impl<'a, R, C> Read for EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySi
                 Some(result) => {
                     let mut r = map_anyhow_io!(
                         result,
-                        format!("Error encrypting chunk {}", self.counter + 1)
+                        format!("Error encrypting chunk {}", self.chunk_counter + 1)
                     )?;
                     self.buffer.append(&mut SEPARATOR.to_vec());
                     self.buffer.append(&mut r);
                 }
                 None => break,
             }
-            self.counter += 1;
+            self.chunk_counter += 1;
             utils::increase_bytes_le(&mut self.nonce);
         }
 
