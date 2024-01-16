@@ -108,7 +108,7 @@ async fn main() {
     let mut file = File::create(download_file_path).unwrap();
     storage.download(&mut file, uuid.to_string()).await.unwrap();
 
-    let mut file = File::open(download_file_path).unwrap().to_plain_stream::<Crypto>(&key);
+    let mut file = File::open(download_file_path).unwrap().to_plain_stream::<Crypto>(&data_key.key);
     let mut output_file = File::create(decrypt_file_path).unwrap();
     let mut buffer = vec![0; 1024 * 1024 * 100];
     loop {

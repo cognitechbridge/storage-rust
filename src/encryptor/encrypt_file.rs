@@ -4,13 +4,13 @@ use super::constants::*;
 use super::{ToEncryptedStream, utils};
 
 use std::io::Read;
-use aead::Aead;
+use aead::{Aead, AeadCore};
 use anyhow::anyhow;
 use crypto_common::{KeyInit, KeySizeUser};
 use crate::map_anyhow_io;
 
 
-pub struct EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyInit + Aead {
+pub struct EncryptedFileGenerator<'a, R, C> where C: KeySizeUser + AeadCore {
     source: R,
     header: EncryptionFileHeader<C>,
     key: &'a TKey<C>,
@@ -20,7 +20,7 @@ pub struct EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyI
     chunk_size: usize,
 }
 
-impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyInit + Aead {
+impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where C: KeySizeUser + AeadCore {
     fn new<T: Read>(source: R, key: &'a TKey<C>, header: EncryptionFileHeader<C>) -> Self {
         let chunk_size = header.chunk_size;
         return EncryptedFileGenerator {
