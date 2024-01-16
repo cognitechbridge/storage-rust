@@ -9,8 +9,8 @@ use crypto_common::typenum::U32;
 use super::{DataKeyRecoveryGenerator, Key, KeyStore};
 
 #[derive(Debug)]
-pub struct GeneratedKey<'a, N: ArrayLength<u8>> {
-    pub key: &'a Key<N>,
+pub struct GeneratedKey<N: ArrayLength<u8>> {
+    pub key: Key<N>,
     pub recovery_blob: String,
 }
 
@@ -22,11 +22,9 @@ impl<N: ArrayLength<u8>> KeyStore<N> {
         let key = Self::generate_rnd_key(rng);
         let blob = DataKeyRecoveryGenerator::<C>::new(&self.root_key)
             .with_uuid_nonce(&key, key_id)?;
-        let key_ref = self
-            .insert_get(&key_id.to_string(), key)
-            .ok_or(anyhow!("Error inserting key to store"))?;
+        self.insert(&key_id.to_string(), key.clone());
         let res = GeneratedKey {
-            key: key_ref,
+            key,
             recovery_blob: blob,
         };
         Ok(res)

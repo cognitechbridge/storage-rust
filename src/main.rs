@@ -40,18 +40,20 @@ async fn main() {
     let uuid = Uuid::new_v7(Timestamp::now(NoContext));
 
     let mut store = KeyStore::new(key);
-    let data_key = store.generate_key_pair::<XChaCha20Poly1305>(&uuid, OsRng).unwrap();
+    let data_key_pair = store.generate_key_pair::<XChaCha20Poly1305>(&uuid, OsRng).unwrap();
+    let blob = data_key_pair.recovery_blob.to_string();
+    let data_key = data_key_pair.key;
 
-    let t = ClientFolderPersistence {};
-    ClientFolderPersistence::load_client_config("Test".to_string());
+    //let t = ClientFolderPersistence {};
+    //ClientFolderPersistence::load_client_config("Test".to_string());
 
-    println!("{:?}", data_key);
-    // let s = store.serialize().unwrap();
-    // println!("{}", s);
+    //println!("{:?}", data_key);
+    let s = store.serialize().unwrap();
+    println!("{}", s);
 
 
-    // let store: KeyStore<KeySize> = KeyStore::from_serialized(&s).unwrap();
-    // println!("{:?}", store);
+    let store: KeyStore<KeySize> = KeyStore::from_serialized(&s).unwrap();
+    println!("{:?}", store);
 
 
     // let x = type_name_of::<ChaCha20Poly1305>().unwrap();
@@ -79,13 +81,13 @@ async fn main() {
     let header = EncryptionFileHeader {
         client_id: "client-id".to_string(),
         file_id: uuid.to_string(),
-        recovery: data_key.recovery_blob,
+        recovery: blob,
         chunk_size: 10,
         ..Default::default()
     };
     let mut reader = File::open("D:\\Sample.txt")
         .unwrap()
-        .to_encrypted_stream::<Crypto>(data_key.key, header).unwrap();
+        .to_encrypted_stream::<Crypto>(&data_key, header).unwrap();
 
 
     // let mut output_file = File::create("D:\\Test.txt").unwrap();
@@ -115,7 +117,7 @@ async fn main() {
     let mut file = File::create(download_file_path).unwrap();
     storage.download(&mut file, uuid.to_string()).await.unwrap();
 
-    let mut file = File::open(download_file_path).unwrap().to_plain_stream::<Crypto>(&data_key.key);
+    let mut file = File::open(download_file_path).unwrap().to_plain_stream::<Crypto>(&data_key);
     let mut output_file = File::create(decrypt_file_path).unwrap();
     let mut buffer = vec![0; 1024 * 1024 * 100];
     loop {
