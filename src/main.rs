@@ -9,7 +9,7 @@ mod utils;
 mod client_persistence;
 
 
-use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, ChaCha20Poly1305, XChaCha20Poly1305};
+use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, XChaCha20Poly1305};
 
 use std::fs::File;
 use std::io::{Read, Write};
@@ -34,13 +34,15 @@ async fn main() {
     let mut key = Crypto::generate_key(&mut OsRng);
 
     for i in 0..key.len() {
-        key[i] = i as u8;
+        key[i] = 0 as u8;
     }
 
     let uuid = Uuid::new_v7(Timestamp::now(NoContext));
 
-    let mut store = KeyStore::new(key);
-    let data_key_pair = store.generate_key_pair::<XChaCha20Poly1305>(&uuid, OsRng).unwrap();
+    let mut store: KeyStore<KeySize, XChaCha20Poly1305> = KeyStore::new(key);
+    store.load_from_persist().unwrap();
+
+    let data_key_pair = store.generate_key_pair(&uuid, OsRng).unwrap();
     let blob = data_key_pair.recovery_blob.to_string();
     let data_key = data_key_pair.key;
 
@@ -48,12 +50,15 @@ async fn main() {
     //ClientFolderPersistence::load_client_config("Test".to_string());
 
     //println!("{:?}", data_key);
-    let s = store.serialize().unwrap();
+    let s = store.serialize_store().unwrap();
     println!("{}", s);
 
 
-    let store: KeyStore<KeySize> = KeyStore::from_serialized(&s).unwrap();
-    println!("{:?}", store);
+    let mut store_2: KeyStore<KeySize, XChaCha20Poly1305> = KeyStore::new(key);
+    store_2.load_from_string(&s).unwrap();
+    println!("{}", store_2.serialize_store().unwrap());
+
+
 
 
     // let x = type_name_of::<ChaCha20Poly1305>().unwrap();

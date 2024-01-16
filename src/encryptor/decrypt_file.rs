@@ -1,5 +1,4 @@
 use super::types::*;
-use super::constants::*;
 use super::{utils, core, ToPlainStream};
 
 use std::io::Read;
