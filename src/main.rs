@@ -6,6 +6,7 @@ mod macros;
 mod storage;
 mod keystore;
 mod utils;
+mod client_persistence;
 
 
 use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, ChaCha20Poly1305, XChaCha20Poly1305};
@@ -16,6 +17,8 @@ use aead::AeadCore;
 use crypto_common::KeySizeUser;
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
+use crate::client_persistence::ClientPersistence;
+use crate::client_persistence::user_file::ClientFolderPersistence;
 use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader};
 use crate::keystore::{DataKeyRecoveryGenerator, KeyStore};
 use crate::storage::*;
@@ -39,9 +42,13 @@ async fn main() {
     let mut store = KeyStore::new(key);
     let data_key = store.generate_key_pair::<XChaCha20Poly1305>(&uuid, OsRng).unwrap();
 
+    let t = ClientFolderPersistence {};
+    ClientFolderPersistence::load_client_config("Test".to_string());
+
     println!("{:?}", data_key);
     // let s = store.serialize().unwrap();
     // println!("{}", s);
+
 
     // let store: KeyStore<KeySize> = KeyStore::from_serialized(&s).unwrap();
     // println!("{:?}", store);
