@@ -12,8 +12,8 @@ type Key<N> = GenericArray<u8, N>;
 
 #[derive(Debug)]
 pub struct KeyStore<N: ArrayLength<u8>> {
-    pub root_key: Key<N>,
-    pub data_key_map: HashMap<String, Key<N>>,
+    root_key: Key<N>,
+    data_key_map: HashMap<String, Key<N>>,
 }
 
 impl<N: ArrayLength<u8>> Default for KeyStore<N> {
@@ -39,7 +39,13 @@ impl<N: ArrayLength<u8>> KeyStore<N> {
     }
 
     #[allow(dead_code)]
-    pub fn generate_key(mut rng: impl CryptoRng + RngCore) -> Key<N> {
+    pub fn insert_get(&mut self, key_id: &str, key: Key<N>) -> Option<&Key<N>> {
+        self.insert(key_id, key);
+        self.get(key_id)
+    }
+
+    #[allow(dead_code)]
+    pub fn generate_rnd_key(mut rng: impl CryptoRng + RngCore) -> Key<N> {
         let mut key = Key::<N>::default();
         rng.fill_bytes(&mut key);
         key

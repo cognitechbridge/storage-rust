@@ -28,7 +28,7 @@ pub struct Recovery {
     pub cipher: String,
 }
 
-pub struct DataKeyRecoveryGenerator<'a, C> where C: KeySizeUser + KeyInit + Aead {
+pub struct DataKeyRecoveryGenerator<'a, C> where C: KeySizeUser {
     root_key: &'a TKey<C>,
 }
 
@@ -38,7 +38,7 @@ impl<'a, C> DataKeyRecoveryGenerator<'a, C> where C: KeySizeUser + KeyInit + Aea
             root_key
         };
     }
-    pub fn with_nonce<N: ArrayLength<u8>>(
+    pub fn with_user_nonce<N: ArrayLength<u8>>(
         &self,
         key: &Key<N>,
         nonce: Nonce<C>,
@@ -58,23 +58,23 @@ impl<'a, C> DataKeyRecoveryGenerator<'a, C> where C: KeySizeUser + KeyInit + Aea
         return Ok(blob);
     }
 
-    pub fn with_uuid<N: ArrayLength<u8>>(
+    pub fn with_uuid_nonce<N: ArrayLength<u8>>(
         &self,
         key: &Key<N>,
         uuid: &Uuid,
     ) -> Result<String> {
         let mut nonce: Nonce<C> = Default::default();
         nonce[..16].copy_from_slice(uuid.as_bytes());
-        self.with_nonce(key, nonce)
+        self.with_user_nonce(key, nonce)
     }
 
     #[allow(dead_code)]
-    pub fn with_rand<N: ArrayLength<u8>>(
+    pub fn with_rand_nonce<N: ArrayLength<u8>>(
         &self,
         key: &Key<N>,
     ) -> Result<String> {
         let nonce = C::generate_nonce(&mut OsRng);
-        self.with_nonce(key, nonce)
+        self.with_user_nonce(key, nonce)
     }
 }
 

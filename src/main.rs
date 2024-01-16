@@ -34,15 +34,17 @@ async fn main() {
         key[i] = i as u8;
     }
 
-    let mut store = KeyStore::new(key);
     let uuid = Uuid::new_v7(Timestamp::now(NoContext));
-    let x = store.generate_stored_key::<XChaCha20Poly1305>(&uuid, OsRng).unwrap();
-    println!("{:?}", x);
-    let s = store.serialize().unwrap();
-    println!("{}", s);
 
-    let store: KeyStore<KeySize> = KeyStore::from_serialized(&s).unwrap();
-    println!("{:?}", store);
+    let mut store = KeyStore::new(key);
+    let data_key = store.generate_key_pair::<XChaCha20Poly1305>(&uuid, OsRng).unwrap();
+
+    println!("{:?}", data_key);
+    // let s = store.serialize().unwrap();
+    // println!("{}", s);
+
+    // let store: KeyStore<KeySize> = KeyStore::from_serialized(&s).unwrap();
+    // println!("{:?}", store);
 
 
     // let x = type_name_of::<ChaCha20Poly1305>().unwrap();
@@ -64,23 +66,19 @@ async fn main() {
     // ***************** Storage ***********************************
 
     let storage = s3::S3Storage::new("ctb-test-2".to_string(), 10 * 1024 * 1024);
-    let uuid = Uuid::new_v7(Timestamp::now(NoContext));
 
     // ************************ Upload *****************************
 
-    let recover_blob = DataKeyRecoveryGenerator::<XChaCha20Poly1305>::new(&key)
-        .with_uuid(&key, &uuid)
-        .unwrap();
     let header = EncryptionFileHeader {
         client_id: "client-id".to_string(),
         file_id: uuid.to_string(),
-        recovery: recover_blob,
+        recovery: data_key.recovery_blob,
         chunk_size: 10,
         ..Default::default()
     };
     let mut reader = File::open("D:\\Sample.txt")
         .unwrap()
-        .to_encrypted_stream::<Crypto>(&key, header).unwrap();
+        .to_encrypted_stream::<Crypto>(data_key.key, header).unwrap();
 
 
     // let mut output_file = File::create("D:\\Test.txt").unwrap();
