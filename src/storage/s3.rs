@@ -9,9 +9,9 @@ pub struct S3Storage {
 
 impl S3Storage {
     pub fn new(bucket_name: String, chunk_size: usize) -> Self {
-        return Self {
+        Self {
             bucket_name,
             chunk_size,
-        };
+        }
     }
 }

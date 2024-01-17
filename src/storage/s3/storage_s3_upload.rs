@@ -65,6 +65,6 @@ impl StorageUpload for S3Storage {
             .upload_id(upload_id)
             .send()
             .await?;
-        return Ok(());
+        Ok(())
     }
 }

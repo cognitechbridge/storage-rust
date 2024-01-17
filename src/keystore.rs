@@ -8,7 +8,6 @@ use anyhow::{bail, Result};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use aead::Aead;
-use aead::rand_core::{CryptoRng, RngCore};
 use crypto_common::{KeyInit, KeySizeUser};
 use generic_array::{ArrayLength, GenericArray};
 
@@ -23,21 +22,21 @@ pub struct KeyStore<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N>> {
 
 impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> Default for KeyStore<N, C> {
     fn default() -> Self {
-        return KeyStore {
+        KeyStore {
             data_key_map: Default::default(),
             root_key: Default::default(),
             recovery_key: Default::default(),
             alg: PhantomData,
-        };
+        }
     }
 }
 
 impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N, C> {
     pub fn new(root_key: Key<N>) -> Self <> {
-        return KeyStore {
+        KeyStore {
             root_key,
             ..Default::default()
-        };
+        }
     }
 
     pub fn set_recover_key(&mut self, recovery_key: Key<N>) -> Result<()> {

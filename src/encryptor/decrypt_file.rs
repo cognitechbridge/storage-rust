@@ -3,7 +3,7 @@ use super::{utils, core, ToPlainStream};
 
 use std::io::Read;
 use aead::{Aead, AeadCore};
-use anyhow::{anyhow, bail};
+use anyhow::bail;
 use crypto_common::{KeyInit, KeySizeUser};
 use crate::map_anyhow_io;
 
@@ -21,14 +21,14 @@ pub struct ReaderDecryptor<'a, T, C> where T: Read, C: KeySizeUser + KeyInit + A
 impl<T: Read> ToPlainStream<T> for T {
     type Output<'a, C: KeySizeUser + KeyInit + Aead> = ReaderDecryptor<'a, T, C>;
     fn to_plain_stream<C: KeySizeUser + KeyInit + Aead>(self, key: &TKey<C>) -> Self::Output<'_, C> {
-        return ReaderDecryptor {
+        ReaderDecryptor {
             source: self,
             key,
             nonce: Default::default(),
             buffer: vec![],
             chunk_size: 0,
             chunk_counter: 0,
-        };
+        }
     }
 }
 
@@ -61,7 +61,7 @@ impl<'a, T, C> Read for ReaderDecryptor<'a, T, C> where T: Read, C: KeySizeUser 
             utils::increase_bytes_le(&mut self.nonce);
         }
         if self.buffer.is_empty() {
-            return Ok(0);
+            return Ok(0)
         }
 
         let len = std::cmp::min(buf.len(), self.buffer.len());
@@ -78,16 +78,16 @@ fn read_file_header<C>(source: &mut impl Read) -> Result<EncryptionFileHeader<C>
     //Read file header
     let header = read_header(source)?;
 
-    return Ok(header);
+    Ok(header)
 }
 
 fn read_file_version(source: &mut (impl Read + Sized)) -> Result<()> {
     let mut buffer = [0u8; 1];
     source.read(&mut buffer)?;
     if buffer[0] != 1u8 {
-        return Err(anyhow!("File version invalid"));
+        bail!("File version invalid")
     }
-    return Ok(());
+    Ok(())
 }
 
 fn read_header<C>(source: &mut (impl Read + Sized)) -> Result<EncryptionFileHeader<C>> {

@@ -15,7 +15,7 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
         let cipher = C::new(&self.root_key);
         let ciphered = map_anyhow_io!(cipher.encrypt(&nonce, key.as_ref()), "Error encrypting data key")?;
         let text = format!("{}:{}:{}", key_id, BASE64_STANDARD.encode(nonce).to_string(), BASE64_STANDARD.encode(ciphered).to_string());
-        return Ok(text);
+        Ok(text)
     }
     pub fn deserialize_key_pair(&self, str: &str) -> Result<(String, Key<N>)> {
         let cipher = C::new(&self.root_key);
@@ -29,7 +29,7 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
         let ciphered_vec = base64_decode(parts[2])?;
         let key_vec = map_anyhow_io!(cipher.decrypt(&nonce, ciphered_vec.as_ref()), "Error decrypting store key")?;
         let key = vec_to_generic_array(key_vec)?;
-        return Ok((key_id, key));
+        Ok((key_id, key))
     }
     pub fn serialize_recovery_key(&self) -> Result<String> {
         let recovery_key = self.recovery_key.as_ref().ok_or(anyhow!("Cannot find recovery key"))?;
@@ -44,7 +44,7 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
             .collect::<Result<Vec<_>, _>>()?
             .join("\n");
         let result = format!("{}\n{}", recovery_str, pairs_str);
-        return Ok(result);
+        Ok(result)
     }
     pub fn load_from_string(&mut self, str: &str) -> Result<()> {
         for line in str.lines() {
@@ -55,6 +55,6 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
                 self.data_key_map.insert(id, key);
             }
         }
-        return Ok(());
+        Ok(())
     }
 }

@@ -23,7 +23,7 @@ pub struct EncryptedFileGenerator<'a, R, C> where C: KeySizeUser + AeadCore {
 impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where C: KeySizeUser + AeadCore {
     fn new<T: Read>(source: R, key: &'a TKey<C>, header: EncryptionFileHeader<C>) -> Self {
         let chunk_size = header.chunk_size;
-        return EncryptedFileGenerator {
+        EncryptedFileGenerator {
             source,
             header,
             buffer: vec![],
@@ -31,7 +31,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where C: KeySizeUser + AeadCore 
             key,
             nonce: Default::default(),
             chunk_size: chunk_size as usize,
-        };
+        }
     }
 }
 
@@ -57,7 +57,7 @@ impl<'a, R, C> Read for EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySi
         }
 
         if self.buffer.is_empty() {
-            return Ok(0);
+            return Ok(0)
         }
 
         let len = std::cmp::min(buf.len(), self.buffer.len());
@@ -76,7 +76,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + 
         //Append header
         let mut header = serde_json::to_string(&self.header)?.to_string();
         self.write_context(&mut header);
-        return Ok(());
+        Ok(())
     }
 
     fn write_context(&mut self, context: &mut String) {
@@ -98,7 +98,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + 
             }
             Err(e) => Some(Err(anyhow!(e))),
         };
-        return ret;
+        ret
     }
 }
 
@@ -108,7 +108,7 @@ impl<T: Read> ToEncryptedStream<T> for T {
     fn to_encrypted_stream<C: KeySizeUser + KeyInit + Aead>(self, key: &TKey<C>, header: EncryptionFileHeader<C>) ->
     Result<Self::Output<'_, C>>
     {
-        return Ok(EncryptedFileGenerator::new::<T>(self, key, header));
+        Ok(EncryptedFileGenerator::new::<T>(self, key, header))
     }
 }
 

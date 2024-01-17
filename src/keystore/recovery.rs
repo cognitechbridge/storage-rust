@@ -1,6 +1,6 @@
 use crate::utils::*;
 
-use aead::{Aead, AeadCore, OsRng};
+use aead::{Aead, AeadCore};
 
 use anyhow::{bail, Result};
 use crypto_common::{Key as TKey, KeyInit, KeySizeUser};
@@ -8,8 +8,6 @@ use serde::{Serialize, Deserialize};
 
 use base64::prelude::*;
 use generic_array::{ArrayLength, GenericArray};
-use uuid::Uuid;
-pub use aead::Nonce;
 use crate::utils::as_array::AsArray;
 
 
@@ -35,9 +33,9 @@ pub struct DataKeyRecoveryGenerator<'a, C> where C: KeySizeUser {
 
 impl<'a, C> DataKeyRecoveryGenerator<'a, C> where C: KeySizeUser + KeyInit + Aead {
     pub fn new(root_key: &'a TKey<C>) -> Self {
-        return DataKeyRecoveryGenerator {
+        DataKeyRecoveryGenerator {
             root_key
-        };
+        }
     }
     pub fn generate<N: ArrayLength<u8>>(
         &self,
@@ -57,7 +55,7 @@ impl<'a, C> DataKeyRecoveryGenerator<'a, C> where C: KeySizeUser + KeyInit + Aea
         let serialized = serde_json::to_string(&x)?;
 
         let blob = BASE64_STANDARD.encode(serialized.as_bytes());
-        return Ok(blob);
+        Ok(blob)
     }
 }
 

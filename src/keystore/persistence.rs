@@ -39,7 +39,7 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
     pub fn load_from_persist(&mut self) -> Result<()> {
         let path = Self::get_persist_path()?;
         if !path.exists() {
-            return Ok(());
+            return Ok(())
         }
         let mut file = File::open(path)?;
         let mut buf = vec![];
