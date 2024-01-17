@@ -1,11 +1,13 @@
 use aead::{Aead, OsRng};
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use crypto_common::{KeyInit, KeySizeUser};
 use generic_array::ArrayLength;
 use crate::keystore::{Key, KeyStore};
 use crate::utils::{base64_decode, vec_to_generic_array};
+
+const RECOVERY_KEY: &str = "---------------RECOVERY-------------";
 
 impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N, C> {
     pub fn serialize_key_pair(&self, key_id: &str, key: &Key<N>) -> Result<String> {
@@ -29,18 +31,29 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
         let key = vec_to_generic_array(key_vec)?;
         return Ok((key_id, key));
     }
+    pub fn serialize_recovery_key(&self) -> Result<String> {
+        let recovery_key = self.recovery_key.as_ref().ok_or(anyhow!("Cannot find recovery key"))?;
+        let res = self.serialize_key_pair(RECOVERY_KEY, &recovery_key)?;
+        Ok(res)
+    }
     pub fn serialize_store(&self) -> Result<String> {
-        let pairs: Result<Vec<String>, _> = self.data_key_map
+        let recovery_str = self.serialize_recovery_key()?;
+        let pairs_str = self.data_key_map
             .iter()
             .map(|(k, v)| self.serialize_key_pair(k, v))
-            .collect();
-        let result = pairs?.join("\n");
+            .collect::<Result<Vec<_>, _>>()?
+            .join("\n");
+        let result = format!("{}\n{}", recovery_str, pairs_str);
         return Ok(result);
     }
     pub fn load_from_string(&mut self, str: &str) -> Result<()> {
         for line in str.lines() {
             let (id, key) = self.deserialize_key_pair(line).unwrap();
-            self.data_key_map.insert(id, key);
+            if id == RECOVERY_KEY {
+                self.recovery_key = Some(key);
+            } else {
+                self.data_key_map.insert(id, key);
+            }
         }
         return Ok(());
     }

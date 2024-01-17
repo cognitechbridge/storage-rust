@@ -54,13 +54,6 @@ async fn main() {
     println!("{}", s);
 
 
-    let mut store_2: KeyStore<KeySize, XChaCha20Poly1305> = KeyStore::new(key);
-    store_2.load_from_string(&s).unwrap();
-    println!("{}", store_2.serialize_store().unwrap());
-
-
-
-
     // let x = type_name_of::<ChaCha20Poly1305>().unwrap();
     // println!("{}", x);
 

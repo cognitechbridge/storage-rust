@@ -4,7 +4,7 @@ mod generate_key;
 mod persistence;
 
 pub use recovery::DataKeyRecoveryGenerator;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use aead::Aead;
@@ -16,9 +16,9 @@ type Key<N> = GenericArray<u8, N>;
 
 pub struct KeyStore<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N>> {
     root_key: Key<N>,
-    recovery_key: Key<N>,
+    recovery_key: Option<Key<N>>,
     data_key_map: HashMap<String, Key<N>>,
-    alg: PhantomData<C>
+    alg: PhantomData<C>,
 }
 
 impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> Default for KeyStore<N, C> {
@@ -27,17 +27,26 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> Default for
             data_key_map: Default::default(),
             root_key: Default::default(),
             recovery_key: Default::default(),
-            alg: PhantomData
+            alg: PhantomData,
         };
     }
 }
 
-impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,C> {
-    pub fn new(key: Key<N>) -> Self <> {
+impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N, C> {
+    pub fn new(root_key: Key<N>) -> Self <> {
         return KeyStore {
-            root_key: key,
+            root_key,
             ..Default::default()
         };
+    }
+
+    pub fn set_recover_key(&mut self, recovery_key: Key<N>) -> Result<()> {
+        if self.recovery_key.is_some() {
+            bail!("Cannot update recovery key");
+        }
+        self.recovery_key = Some(recovery_key);
+        self.persist_recovery_key()?;
+        Ok(())
     }
 
     #[allow(dead_code)]

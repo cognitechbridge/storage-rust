@@ -2,7 +2,7 @@ use aead::Aead;
 use aead::rand_core::{CryptoRng, RngCore};
 use generic_array::ArrayLength;
 use uuid::Uuid;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use crypto_common::{KeyInit, KeySizeUser};
 use super::{DataKeyRecoveryGenerator, Key, KeyStore};
 
@@ -22,7 +22,8 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
     {
         let key = C::generate_key(rng.clone());
         let nonce = C::generate_nonce(rng.clone());
-        let blob = DataKeyRecoveryGenerator::<C>::new(&self.recovery_key)
+        let recovery_key = self.recovery_key.as_ref().ok_or(anyhow!("Recovery key is not stored"))?;
+        let blob = DataKeyRecoveryGenerator::<C>::new(recovery_key)
             .generate(&key, &nonce)?;
         self.insert(&key_id.to_string(), key.clone())?;
         let res = GeneratedKey {

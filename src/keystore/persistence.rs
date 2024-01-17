@@ -17,15 +17,23 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
         path.push("key_store");
         Ok(path)
     }
-    pub fn persist_key(&self, key_id: &str, key: &Key<N>) -> Result<()> {
+    fn append_to_file(str: &str) -> Result<()>{
         let path = Self::get_persist_path()?;
         let mut file = OpenOptions::new()
             .append(true)
             .create(true)
             .open(path)?;
-
-        let str = self.serialize_key_pair(key_id, key)?;
         writeln!(file, "{}", str)?;
+        Ok(())
+    }
+    pub fn persist_recovery_key(&self) -> Result<()> {
+        let str = self.serialize_recovery_key()?;
+        Self::append_to_file(&str)?;
+        Ok(())
+    }
+    pub fn persist_key(&self, key_id: &str, key: &Key<N>) -> Result<()> {
+        let str = self.serialize_key_pair(key_id, key)?;
+        Self::append_to_file(&str)?;
         Ok(())
     }
     pub fn load_from_persist(&mut self) -> Result<()> {
