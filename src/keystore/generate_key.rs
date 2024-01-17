@@ -12,14 +12,18 @@ pub struct GeneratedKey<N: ArrayLength<u8>> {
     pub recovery_blob: String,
 }
 
-impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,C> {
-    pub fn generate_key_pair(&mut self, key_id: &Uuid, rng: impl CryptoRng + RngCore)
-                                -> Result<GeneratedKey<N>>
+impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N, C> {
+    pub fn generate_key_pair(
+        &mut self,
+        key_id: &Uuid,
+        rng: impl CryptoRng + RngCore + Clone)
+        -> Result<GeneratedKey<N>>
         where C: KeySizeUser<KeySize=N> + KeyInit + Aead
     {
-        let key = Self::generate_rnd_key(rng);
-        let blob = DataKeyRecoveryGenerator::<C>::new(&self.root_key)
-            .with_uuid_nonce(&key, key_id)?;
+        let key = C::generate_key(rng.clone());
+        let nonce = C::generate_nonce(rng.clone());
+        let blob = DataKeyRecoveryGenerator::<C>::new(&self.recovery_key)
+            .generate(&key, &nonce)?;
         self.insert(&key_id.to_string(), key.clone())?;
         let res = GeneratedKey {
             key,

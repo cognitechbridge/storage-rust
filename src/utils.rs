@@ -1,3 +1,5 @@
+pub mod as_array;
+
 use std::fs::create_dir_all;
 use std::path::PathBuf;
 use regex::Regex;

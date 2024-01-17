@@ -14,8 +14,9 @@ use generic_array::{ArrayLength, GenericArray};
 
 type Key<N> = GenericArray<u8, N>;
 
-pub struct KeyStore<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> {
+pub struct KeyStore<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N>> {
     root_key: Key<N>,
+    recovery_key: Key<N>,
     data_key_map: HashMap<String, Key<N>>,
     alg: PhantomData<C>
 }
@@ -25,6 +26,7 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> Default for
         return KeyStore {
             data_key_map: Default::default(),
             root_key: Default::default(),
+            recovery_key: Default::default(),
             alg: PhantomData
         };
     }
@@ -43,13 +45,6 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
         self.persist_key(key_id, &key)?;
         self.data_key_map.insert(key_id.to_string(), key);
         Ok(())
-    }
-
-    #[allow(dead_code)]
-    pub fn generate_rnd_key(mut rng: impl CryptoRng + RngCore) -> Key<N> {
-        let mut key = Key::<N>::default();
-        rng.fill_bytes(&mut key);
-        key
     }
 
     #[allow(dead_code)]
