@@ -2,12 +2,13 @@ use crate::utils::*;
 
 use aead::{Aead, AeadCore};
 
-use anyhow::{bail, Result};
-use crypto_common::{Key as TKey, KeyInit, KeySizeUser};
+use anyhow::{anyhow, bail, Result};
+use crypto_common::{KeyInit, KeySizeUser};
 use serde::{Serialize, Deserialize};
 
 use base64::prelude::*;
 use generic_array::{ArrayLength, GenericArray};
+use crate::keystore::KeyStore;
 use crate::utils::as_array::AsArray;
 
 
@@ -27,22 +28,31 @@ pub struct Recovery {
     pub cipher: String,
 }
 
-pub struct DataKeyRecoveryGenerator<'a, C> where C: KeySizeUser {
-    root_key: &'a TKey<C>,
-}
+impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N, C> {
 
-impl<'a, C> DataKeyRecoveryGenerator<'a, C> where C: KeySizeUser + KeyInit + Aead {
-    pub fn new(root_key: &'a TKey<C>) -> Self {
-        DataKeyRecoveryGenerator {
-            root_key
-        }
+    pub fn get_recovery_key(&self) -> Option<&crate::keystore::Key<N>> {
+        self.recovery_key.as_ref()
     }
-    pub fn generate<N: ArrayLength<u8>>(
+
+    pub fn set_recover_key(&mut self, recovery_key: crate::keystore::Key<N>) -> Result<()> {
+        if self.loaded == false {
+            bail!("Cannot update recovery key: Store not loaded");
+        }
+        if self.get_recovery_key().is_some() {
+            bail!("Cannot update recovery key: Key exist");
+        }
+        self.recovery_key = Some(recovery_key);
+        self.persist_recovery_key()?;
+        Ok(())
+    }
+
+    pub fn generate_recovery_blob(
         &self,
         key: &Key<N>,
         nonce: &impl AsArray<<C as AeadCore>::NonceSize>,
     ) -> Result<String> {
-        let cipher = C::new(self.root_key);
+        let recovery_key = self.get_recovery_key().ok_or(anyhow!("No recovery key is stored."))?;
+        let cipher = C::new(recovery_key);
         let nonce = nonce.as_array();
         let cipher_result = cipher.encrypt(&nonce, key.as_ref())
             .or_else(|_x| bail!("Encryption error"))?;

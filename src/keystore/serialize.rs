@@ -32,7 +32,7 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
         Ok((key_id, key))
     }
     pub fn serialize_recovery_key(&self) -> Result<String> {
-        let recovery_key = self.recovery_key.as_ref().ok_or(anyhow!("Cannot find recovery key"))?;
+        let recovery_key = self.get_recovery_key().ok_or(anyhow!("Cannot find recovery key"))?;
         let res = self.serialize_key_pair(RECOVERY_KEY, &recovery_key)?;
         Ok(res)
     }
@@ -55,6 +55,7 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
                 self.data_key_map.insert(id, key);
             }
         }
+        self.loaded = true;
         Ok(())
     }
 }

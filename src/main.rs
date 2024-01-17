@@ -20,7 +20,7 @@ use uuid::timestamp::Timestamp;
 use crate::client_persistence::ClientPersistence;
 use crate::client_persistence::user_file::ClientFolderPersistence;
 use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader};
-use crate::keystore::{DataKeyRecoveryGenerator, KeyStore};
+use crate::keystore::{KeyStore};
 use crate::storage::*;
 
 type KeySize = <Crypto as KeySizeUser>::KeySize;
