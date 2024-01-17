@@ -1,18 +1,18 @@
+use super::{
+    Crypto,
+    KeyStore,
+    Key,
+};
 use crate::utils::*;
 
-use aead::{Aead, AeadCore};
+use aead::{AeadCore};
 
 use anyhow::{anyhow, bail, Result};
-use crypto_common::{KeyInit, KeySizeUser};
 use serde::{Serialize, Deserialize};
 
 use base64::prelude::*;
-use generic_array::{ArrayLength, GenericArray};
-use crate::keystore::KeyStore;
+use generic_array::ArrayLength;
 use crate::utils::as_array::AsArray;
-
-
-type Key<N> = GenericArray<u8, N>;
 
 #[derive(Serialize, Deserialize)]
 pub enum RecoveryVersion {
@@ -28,13 +28,12 @@ pub struct Recovery {
     pub cipher: String,
 }
 
-impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N, C> {
-
-    pub fn get_recovery_key(&self) -> Option<&crate::keystore::Key<N>> {
+impl<N: ArrayLength<u8>, C: Crypto<KeySize=N>> KeyStore<N, C> {
+    pub fn get_recovery_key(&self) -> Option<&Key<N>> {
         self.recovery_key.as_ref()
     }
 
-    pub fn set_recover_key(&mut self, recovery_key: crate::keystore::Key<N>) -> Result<()> {
+    pub fn set_recover_key(&mut self, recovery_key: Key<N>) -> Result<()> {
         if self.loaded == false {
             bail!("Cannot update recovery key: Store not loaded");
         }

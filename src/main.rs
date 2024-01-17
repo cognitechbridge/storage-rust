@@ -7,18 +7,17 @@ mod storage;
 mod keystore;
 mod utils;
 mod client_persistence;
+mod common;
 
 
 use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, XChaCha20Poly1305};
 
 use std::fs::File;
 use std::io::{Read, Write};
-use aead::AeadCore;
 use crypto_common::KeySizeUser;
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
 use crate::client_persistence::ClientPersistence;
-use crate::client_persistence::user_file::ClientFolderPersistence;
 use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader};
 use crate::keystore::{KeyStore};
 use crate::storage::*;

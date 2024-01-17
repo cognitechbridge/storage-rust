@@ -3,16 +3,15 @@ mod recovery;
 mod generate_key;
 mod persistence;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use aead::Aead;
-use crypto_common::{KeyInit, KeySizeUser};
 use generic_array::{ArrayLength, GenericArray};
+use crate::common::Crypto;
 
 type Key<N> = GenericArray<u8, N>;
 
-pub struct KeyStore<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N>> {
+pub struct KeyStore<N: ArrayLength<u8>, C: Crypto<KeySize=N>> {
     root_key: Key<N>,
     recovery_key: Option<Key<N>>,
     data_key_map: HashMap<String, Key<N>>,
@@ -20,7 +19,7 @@ pub struct KeyStore<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N>> {
     alg: PhantomData<C>,
 }
 
-impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> Default for KeyStore<N, C> {
+impl<N: ArrayLength<u8>, C: Crypto<KeySize=N>> Default for KeyStore<N, C> {
     fn default() -> Self {
         KeyStore {
             data_key_map: Default::default(),
@@ -32,7 +31,7 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> Default for
     }
 }
 
-impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N, C> {
+impl<N: ArrayLength<u8>, C: Crypto<KeySize=N>> KeyStore<N, C> {
     pub fn new(root_key: Key<N>) -> Self <> {
         KeyStore {
             root_key,

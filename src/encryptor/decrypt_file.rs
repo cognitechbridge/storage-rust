@@ -1,15 +1,19 @@
-use super::types::*;
-use super::{utils, core, ToPlainStream};
+use super::{
+    *,
+    utils,
+    core,
+    ToPlainStream,
+    Crypto,
+};
 
 use std::io::Read;
-use aead::{Aead, AeadCore};
+use aead::AeadCore;
 use anyhow::bail;
-use crypto_common::{KeyInit, KeySizeUser};
 use crate::map_anyhow_io;
 
 use generic_array::typenum::Unsigned;
 
-pub struct ReaderDecryptor<'a, T, C> where T: Read, C: KeySizeUser + KeyInit + Aead {
+pub struct ReaderDecryptor<'a, T, C> where T: Read, C: Crypto {
     source: T,
     key: &'a TKey<C>,
     nonce: TNonce<C>,
@@ -19,8 +23,8 @@ pub struct ReaderDecryptor<'a, T, C> where T: Read, C: KeySizeUser + KeyInit + A
 }
 
 impl<T: Read> ToPlainStream<T> for T {
-    type Output<'a, C: KeySizeUser + KeyInit + Aead> = ReaderDecryptor<'a, T, C>;
-    fn to_plain_stream<C: KeySizeUser + KeyInit + Aead>(self, key: &TKey<C>) -> Self::Output<'_, C> {
+    type Output<'a, C: Crypto> = ReaderDecryptor<'a, T, C>;
+    fn to_plain_stream<C: Crypto>(self, key: &TKey<C>) -> Self::Output<'_, C> {
         ReaderDecryptor {
             source: self,
             key,
@@ -32,7 +36,7 @@ impl<T: Read> ToPlainStream<T> for T {
     }
 }
 
-impl<'a, T, C> Read for ReaderDecryptor<'a, T, C> where T: Read, C: KeySizeUser + KeyInit + Aead {
+impl<'a, T, C> Read for ReaderDecryptor<'a, T, C> where T: Read, C: Crypto {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.chunk_size == 0 {
             let header = map_anyhow_io!(

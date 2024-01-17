@@ -1,16 +1,16 @@
-use super::types::*;
-use super::constants::*;
-
-use super::{ToEncryptedStream, utils};
+use super::{
+    *,
+    constants::{SEPARATOR, ENCRYPTED_FILE_VERSION},
+    utils,
+    ToEncryptedStream,
+};
 
 use std::io::Read;
-use aead::{Aead, AeadCore};
 use anyhow::anyhow;
-use crypto_common::{KeyInit, KeySizeUser};
 use crate::map_anyhow_io;
 
 
-pub struct EncryptedFileGenerator<'a, R, C> where C: KeySizeUser + AeadCore {
+pub struct EncryptedFileGenerator<'a, R, C> where C: Crypto {
     source: R,
     header: EncryptionFileHeader<C>,
     key: &'a TKey<C>,
@@ -20,7 +20,7 @@ pub struct EncryptedFileGenerator<'a, R, C> where C: KeySizeUser + AeadCore {
     chunk_size: usize,
 }
 
-impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where C: KeySizeUser + AeadCore {
+impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where C: Crypto {
     fn new<T: Read>(source: R, key: &'a TKey<C>, header: EncryptionFileHeader<C>) -> Self {
         let chunk_size = header.chunk_size;
         EncryptedFileGenerator {
@@ -35,7 +35,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where C: KeySizeUser + AeadCore 
     }
 }
 
-impl<'a, R, C> Read for EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyInit + Aead {
+impl<'a, R, C> Read for EncryptedFileGenerator<'a, R, C> where R: Read, C: Crypto {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         if self.chunk_counter == 0 {
             map_anyhow_io!(self.append_header(),"Error appending header")?;
@@ -57,7 +57,7 @@ impl<'a, R, C> Read for EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySi
         }
 
         if self.buffer.is_empty() {
-            return Ok(0)
+            return Ok(0);
         }
 
         let len = std::cmp::min(buf.len(), self.buffer.len());
@@ -67,7 +67,7 @@ impl<'a, R, C> Read for EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySi
     }
 }
 
-impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + KeyInit + Aead {
+impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: Crypto {
     fn append_header(&mut self) -> Result<()> {
         //Append file version
         let mut file_version = vec![ENCRYPTED_FILE_VERSION];
@@ -104,8 +104,8 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: KeySizeUser + 
 
 
 impl<T: Read> ToEncryptedStream<T> for T {
-    type Output<'a, C: KeySizeUser + KeyInit + Aead> = EncryptedFileGenerator<'a, T, C>;
-    fn to_encrypted_stream<C: KeySizeUser + KeyInit + Aead>(self, key: &TKey<C>, header: EncryptionFileHeader<C>) ->
+    type Output<'a, C: Crypto> = EncryptedFileGenerator<'a, T, C>;
+    fn to_encrypted_stream<C: Crypto>(self, key: &TKey<C>, header: EncryptionFileHeader<C>) ->
     Result<Self::Output<'_, C>>
     {
         Ok(EncryptedFileGenerator::new::<T>(self, key, header))
