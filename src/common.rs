@@ -1,8 +1,15 @@
+mod generic_array;
+
+use ::generic_array::GenericArray;
 use aead::{Aead, AeadCore};
 use crypto_common::{KeyInit, KeySizeUser};
-use generic_array::GenericArray;
+
+pub use generic_array::{
+    GenericArrayFrom
+};
 
 pub trait Crypto: KeySizeUser + KeyInit + Aead {}
+
 impl<T> Crypto for T where T: KeySizeUser + KeyInit + Aead {}
 
 

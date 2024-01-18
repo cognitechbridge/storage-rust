@@ -3,10 +3,9 @@ pub mod as_array;
 use std::fs::create_dir_all;
 use std::path::PathBuf;
 use regex::Regex;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use generic_array::{ArrayLength, GenericArray};
 
 pub fn type_name_of<T>() -> Result<String> {
     let full_name = std::any::type_name::<T>();
@@ -26,14 +25,7 @@ pub fn get_user_path() -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn vec_to_generic_array<N>(vec: Vec<u8>) -> Result<GenericArray<u8, N>> where N: ArrayLength<u8> {
-    if vec.len() != N::to_usize() {
-        bail!("Decoded size doesn't match expected size.")
-    }
-    let mut arr: GenericArray<u8, N> = Default::default();
-    arr.iter_mut().zip(vec).for_each(|(place, element)| *place = element);
-    Ok(arr)
-}
+
 
 pub fn base64_decode(str: &str) -> Result<Vec<u8>> {
     let vec = BASE64_STANDARD.decode(str.trim().to_string())?;

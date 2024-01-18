@@ -1,12 +1,13 @@
 use super::{
-    Crypto
+    KeyStore,
+    Crypto, Key, Nonce
 };
 use aead::OsRng;
 use anyhow::{anyhow, bail, Result};
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
-use crate::keystore::{Key, KeyStore};
-use crate::utils::{base64_decode, vec_to_generic_array};
+use crate::common::GenericArrayFrom;
+use crate::utils::{base64_decode};
 
 const RECOVERY_KEY: &str = "---------------RECOVERY-------------";
 
@@ -26,10 +27,10 @@ impl<C: Crypto> KeyStore<C> {
         }
         let key_id = parts[0].trim().to_string();
         let nonce_vec = base64_decode(parts[1])?;
-        let nonce = vec_to_generic_array(nonce_vec)?;
+        let nonce = Nonce::<C>::try_from_vec(nonce_vec)?;
         let ciphered_vec = base64_decode(parts[2])?;
         let key_vec = map_anyhow_io!(cipher.decrypt(&nonce, ciphered_vec.as_ref()), "Error decrypting store key")?;
-        let key = vec_to_generic_array(key_vec)?;
+        let key = Key::<C>::try_from_vec(key_vec)?;
         Ok((key_id, key))
     }
     pub fn serialize_recovery_key(&self) -> Result<String> {

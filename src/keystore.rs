@@ -6,7 +6,7 @@ mod persistence;
 use anyhow::Result;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use crate::common::{Crypto, Key};
+use crate::common::{Crypto, Key, Nonce};
 
 pub struct KeyStore<C: Crypto> {
     root_key: Key<C>,
