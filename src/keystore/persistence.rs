@@ -1,17 +1,12 @@
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use aead::Aead;
 use anyhow::{Result};
-use crypto_common::{KeyInit, KeySizeUser};
-use generic_array::{ArrayLength, GenericArray};
+use crate::common::{Crypto, Key};
 use crate::keystore::KeyStore;
 use crate::utils::get_user_path;
 
-type Key<N> = GenericArray<u8, N>;
-
-
-impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N, C> {
+impl<C: Crypto> KeyStore<C> {
     fn get_persist_path() -> Result<PathBuf> {
         let mut path = get_user_path()?;
         path.push("key_store");
@@ -31,7 +26,7 @@ impl<N: ArrayLength<u8>, C: KeySizeUser<KeySize=N> + KeyInit + Aead> KeyStore<N,
         Self::append_to_file(&str)?;
         Ok(())
     }
-    pub fn persist_key(&self, key_id: &str, key: &Key<N>) -> Result<()> {
+    pub fn persist_key(&self, key_id: &str, key: &Key<C>) -> Result<()> {
         let str = self.serialize_key_pair(key_id, key)?;
         Self::append_to_file(&str)?;
         Ok(())

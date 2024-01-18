@@ -11,7 +11,6 @@ use anyhow::{anyhow, bail, Result};
 use serde::{Serialize, Deserialize};
 
 use base64::prelude::*;
-use generic_array::ArrayLength;
 use crate::utils::as_array::AsArray;
 
 #[derive(Serialize, Deserialize)]
@@ -28,12 +27,12 @@ pub struct Recovery {
     pub cipher: String,
 }
 
-impl<N: ArrayLength<u8>, C: Crypto<KeySize=N>> KeyStore<N, C> {
-    pub fn get_recovery_key(&self) -> Option<&Key<N>> {
+impl<C: Crypto> KeyStore<C> {
+    pub fn get_recovery_key(&self) -> Option<&Key<C>> {
         self.recovery_key.as_ref()
     }
 
-    pub fn set_recover_key(&mut self, recovery_key: Key<N>) -> Result<()> {
+    pub fn set_recover_key(&mut self, recovery_key: Key<C>) -> Result<()> {
         if self.loaded == false {
             bail!("Cannot update recovery key: Store not loaded");
         }
@@ -47,7 +46,7 @@ impl<N: ArrayLength<u8>, C: Crypto<KeySize=N>> KeyStore<N, C> {
 
     pub fn generate_recovery_blob(
         &self,
-        key: &Key<N>,
+        key: &Key<C>,
         nonce: &impl AsArray<<C as AeadCore>::NonceSize>,
     ) -> Result<String> {
         let recovery_key = self.get_recovery_key().ok_or(anyhow!("No recovery key is stored."))?;

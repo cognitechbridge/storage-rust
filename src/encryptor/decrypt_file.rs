@@ -3,7 +3,7 @@ use super::{
     utils,
     core,
     ToPlainStream,
-    Crypto,
+    Crypto, Key, Nonce
 };
 
 use std::io::Read;
@@ -15,8 +15,8 @@ use generic_array::typenum::Unsigned;
 
 pub struct ReaderDecryptor<'a, T, C> where T: Read, C: Crypto {
     source: T,
-    key: &'a TKey<C>,
-    nonce: TNonce<C>,
+    key: &'a Key<C>,
+    nonce: Nonce<C>,
     buffer: Vec<u8>,
     chunk_size: usize,
     chunk_counter: usize,
@@ -24,7 +24,7 @@ pub struct ReaderDecryptor<'a, T, C> where T: Read, C: Crypto {
 
 impl<T: Read> ToPlainStream<T> for T {
     type Output<'a, C: Crypto> = ReaderDecryptor<'a, T, C>;
-    fn to_plain_stream<C: Crypto>(self, key: &TKey<C>) -> Self::Output<'_, C> {
+    fn to_plain_stream<C: Crypto>(self, key: &Key<C>) -> Self::Output<'_, C> {
         ReaderDecryptor {
             source: self,
             key,

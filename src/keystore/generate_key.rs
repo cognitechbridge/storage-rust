@@ -4,22 +4,21 @@ use super::{
     KeyStore
 };
 use aead::rand_core::{CryptoRng, RngCore};
-use generic_array::ArrayLength;
 use uuid::Uuid;
 use anyhow::Result;
 
 #[derive(Debug)]
-pub struct GeneratedKey<N: ArrayLength<u8>> {
-    pub key: Key<N>,
+pub struct GeneratedKey<C: Crypto> {
+    pub key: Key<C>,
     pub recovery_blob: String,
 }
 
-impl<N: ArrayLength<u8>, C: Crypto<KeySize=N>> KeyStore<N, C> {
+impl<C: Crypto> KeyStore<C> {
     pub fn generate_key_pair(
         &mut self,
         key_id: &Uuid,
         rng: impl CryptoRng + RngCore + Clone)
-        -> Result<GeneratedKey<N>>
+        -> Result<GeneratedKey<C>>
     {
         let key = C::generate_key(rng.clone());
         let nonce = C::generate_nonce(rng.clone());

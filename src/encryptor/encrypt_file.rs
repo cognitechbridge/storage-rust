@@ -1,6 +1,7 @@
 use super::{
     *,
     constants::{SEPARATOR, ENCRYPTED_FILE_VERSION},
+    Crypto, Key, Nonce,
     utils,
     ToEncryptedStream,
 };
@@ -13,15 +14,15 @@ use crate::map_anyhow_io;
 pub struct EncryptedFileGenerator<'a, R, C> where C: Crypto {
     source: R,
     header: EncryptionFileHeader<C>,
-    key: &'a TKey<C>,
+    key: &'a Key<C>,
     buffer: Vec<u8>,
-    nonce: TNonce<C>,
+    nonce: Nonce<C>,
     chunk_counter: u32,
     chunk_size: usize,
 }
 
 impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where C: Crypto {
-    fn new<T: Read>(source: R, key: &'a TKey<C>, header: EncryptionFileHeader<C>) -> Self {
+    fn new<T: Read>(source: R, key: &'a Key<C>, header: EncryptionFileHeader<C>) -> Self {
         let chunk_size = header.chunk_size;
         EncryptedFileGenerator {
             source,
@@ -105,7 +106,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: Crypto {
 
 impl<T: Read> ToEncryptedStream<T> for T {
     type Output<'a, C: Crypto> = EncryptedFileGenerator<'a, T, C>;
-    fn to_encrypted_stream<C: Crypto>(self, key: &TKey<C>, header: EncryptionFileHeader<C>) ->
+    fn to_encrypted_stream<C: Crypto>(self, key: &Key<C>, header: EncryptionFileHeader<C>) ->
     Result<Self::Output<'_, C>>
     {
         Ok(EncryptedFileGenerator::new::<T>(self, key, header))

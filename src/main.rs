@@ -38,7 +38,7 @@ async fn main() {
 
     let uuid = Uuid::new_v7(Timestamp::now(NoContext));
 
-    let mut store: KeyStore<KeySize, XChaCha20Poly1305> = KeyStore::new(key);
+    let mut store: KeyStore<XChaCha20Poly1305> = KeyStore::new(key);
     store.load_from_persist().unwrap();
 
     let data_key_pair = store.generate_key_pair(&uuid, OsRng).unwrap();
