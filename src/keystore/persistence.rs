@@ -1,46 +1,59 @@
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Write};
-use std::path::PathBuf;
-use anyhow::{Result};
-use crate::common::{Crypto, Key};
+use anyhow::{bail, Result};
+use rusqlite::{Connection, Error, params};
+use crate::common::{
+    utils::get_user_path,
+    Crypto, Key,
+};
 use crate::keystore::KeyStore;
-use crate::utils::get_user_path;
+
+pub struct KeyStorePersist {
+    pub db_conn: Connection,
+}
+
+mod migrations;
+
+impl KeyStorePersist {
+    pub fn new() -> Result<Self> {
+        let mut path = get_user_path()?;
+        path.push("db.db3");
+        let mut conn = Connection::open(path).unwrap();
+        Ok(Self {
+            db_conn: conn
+        })
+    }
+
+    pub fn init(&mut self) -> Result<()>{
+        let migrations = migrations::get_migrations();
+        self.db_conn.pragma_update(None, "journal_mode", &"WAL").unwrap();
+        migrations.to_latest(&mut self.db_conn)?;
+        Ok(())
+    }
+
+    pub fn persist_key(&self, key_id: &str, nonce: &str, key: &str) -> Result<()> {
+        self.db_conn.execute(
+            "INSERT INTO keystore (id, nonce, key) VALUES (?1, ?2, ?3)",
+            (key_id, nonce, key),
+        )?;
+        Ok(())
+    }
+
+    pub fn get_key(&self, key_id: &str) -> Result<Option<(String, String)>> {
+        match self.db_conn.query_row(
+            "SELECT id, nonce, key FROM keystore WHERE id = ?1",
+            params![key_id],
+            |row| Ok((row.get(1)?, row.get(2)?)),
+        ) {
+            Ok((nonce, key)) => Ok(Some((nonce, key))),
+            Err(Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => bail!("Query failed: {}", e),
+        }
+    }
+}
 
 impl<C: Crypto> KeyStore<C> {
-    fn get_persist_path() -> Result<PathBuf> {
-        let mut path = get_user_path()?;
-        path.push("key_store");
-        Ok(path)
-    }
-    fn append_to_file(str: &str) -> Result<()>{
-        let path = Self::get_persist_path()?;
-        let mut file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(path)?;
-        writeln!(file, "{}", str)?;
-        Ok(())
-    }
-    pub fn persist_recovery_key(&self) -> Result<()> {
-        let str = self.serialize_recovery_key()?;
-        Self::append_to_file(&str)?;
-        Ok(())
-    }
     pub fn persist_key(&self, key_id: &str, key: &Key<C>) -> Result<()> {
-        let str = self.serialize_key_pair(key_id, key)?;
-        Self::append_to_file(&str)?;
-        Ok(())
-    }
-    pub fn load_from_persist(&mut self) -> Result<()> {
-        let path = Self::get_persist_path()?;
-        if !path.exists() {
-            return Ok(())
-        }
-        let mut file = File::open(path)?;
-        let mut buf = vec![];
-        file.read_to_end(&mut buf)?;
-        let str = String::from_utf8(buf)?;
-        self.load_from_string(&str)?;
+        let (nonce, key) = self.serialize_key_pair(key)?;
+        self.persist.persist_key(&key_id, &nonce, &key)?;
         Ok(())
     }
 }

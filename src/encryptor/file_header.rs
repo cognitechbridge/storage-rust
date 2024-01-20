@@ -1,6 +1,6 @@
+use crate::common::utils::type_name_of;
 use std::marker::PhantomData;
 use serde::{Deserialize, Serialize};
-use crate::utils::type_name_of;
 use super::constants::*;
 
 #[derive(Serialize, Deserialize)]

@@ -2,8 +2,7 @@ use super::{
     *,
     utils,
     core,
-    ToPlainStream,
-    Crypto, Key, Nonce
+    Crypto, Key, Nonce,
 };
 
 use std::io::Read;
@@ -22,11 +21,10 @@ pub struct ReaderDecryptor<'a, T, C> where T: Read, C: Crypto {
     chunk_counter: usize,
 }
 
-impl<T: Read> ToPlainStream<T> for T {
-    type Output<'a, C: Crypto> = ReaderDecryptor<'a, T, C>;
-    fn to_plain_stream<C: Crypto>(self, key: &Key<C>) -> Self::Output<'_, C> {
-        ReaderDecryptor {
-            source: self,
+impl<'a, T, C> ReaderDecryptor<'a, T, C> where T: Read, C: Crypto {
+    pub fn new(key: &'a Key<C>, source: T) -> Self {
+        Self {
+            source,
             key,
             nonce: Default::default(),
             buffer: vec![],
@@ -65,7 +63,7 @@ impl<'a, T, C> Read for ReaderDecryptor<'a, T, C> where T: Read, C: Crypto {
             utils::increase_bytes_le(&mut self.nonce);
         }
         if self.buffer.is_empty() {
-            return Ok(0)
+            return Ok(0);
         }
 
         let len = std::cmp::min(buf.len(), self.buffer.len());

@@ -3,9 +3,9 @@ use super::{
     Key,
     KeyStore
 };
-use aead::rand_core::{CryptoRng, RngCore};
 use uuid::Uuid;
 use anyhow::Result;
+use crypto_common::rand_core::CryptoRngCore;
 
 #[derive(Debug)]
 pub struct GeneratedKey<C: Crypto> {
@@ -17,7 +17,7 @@ impl<C: Crypto> KeyStore<C> {
     pub fn generate_key_pair(
         &mut self,
         key_id: &Uuid,
-        rng: impl CryptoRng + RngCore + Clone)
+        rng: impl CryptoRngCore + Clone)
         -> Result<GeneratedKey<C>>
     {
         let key = C::generate_key(rng.clone());

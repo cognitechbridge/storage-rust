@@ -1,5 +1,7 @@
 use std::io::Read;
+use std::marker::PhantomData;
 pub use types::*;
+use crate::encryptor::decrypt_file::ReaderDecryptor;
 use crate::encryptor::encrypt_file::EncryptedFileGenerator;
 
 
@@ -11,19 +13,21 @@ mod constants;
 pub mod types;
 mod file_header;
 
-pub struct Encryptor {
+pub struct Encryptor<C: Crypto> {
     pub client_id: String,
     pub chunk_size: u64,
+    pub alg: PhantomData<C>,
 }
 
-impl Encryptor {
+impl<C: Crypto> Encryptor<C> {
     pub fn new(client_id: String, chunk_size: u64) -> Self {
         Self {
             client_id,
             chunk_size,
+            alg: PhantomData,
         }
     }
-    pub fn encrypt<'a, C: Crypto, R: Read>(&'a self, source: R, file_id: String, key: &'a Key<C>, recovery: String) -> Result<EncryptedFileGenerator<R, C>> {
+    pub fn encrypt<'a, R: Read>(&'a self, source: R, file_id: String, key: &'a Key<C>, recovery: String) -> Result<EncryptedFileGenerator<R, C>> {
         let header = EncryptionFileHeader {
             client_id: self.client_id.clone(),
             chunk_size: self.chunk_size,
@@ -35,8 +39,18 @@ impl Encryptor {
     }
 }
 
-pub trait ToPlainStream<Y: Read> {
-    type Output<'a, C: Crypto>: Read;
-    fn to_plain_stream<C: Crypto>(self, key: &Key<C>) -> Self::Output<'_, C>;
+pub struct Decryptor<C: Crypto> {
+    pub alg: PhantomData<C>,
+}
+
+impl<C: Crypto> Decryptor<C> {
+    pub fn new() -> Self <> {
+        Decryptor {
+            alg: Default::default(),
+        }
+    }
+    pub fn decrypt<'a, R: Read>(&'a self, key: &'a Key<C>, source: R) -> Result<ReaderDecryptor<R, C>> {
+        Ok(ReaderDecryptor::new(key, source))
+    }
 }
 
