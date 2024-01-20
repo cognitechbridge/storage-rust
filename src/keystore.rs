@@ -43,7 +43,7 @@ impl<C: Crypto> KeyStore<C> {
 
     #[allow(dead_code)]
     pub fn insert(&mut self, key_id: &str, key: Key<C>) -> Result<()> {
-        self.persist_key(key_id, &key)?;
+        self.persist_key(key_id, key)?;
         Ok(())
     }
 

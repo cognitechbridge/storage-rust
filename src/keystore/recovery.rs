@@ -41,7 +41,7 @@ impl<C: Crypto> KeyStore<C> {
             bail!("Cannot update recovery key: Key exist");
         }
         self.recovery_key = Some(recovery_key.clone());
-        self.persist_key(RECOVERY_KEY,&recovery_key)?;
+        self.persist_key(RECOVERY_KEY,recovery_key)?;
         Ok(())
     }
 

@@ -16,7 +16,7 @@ impl KeyStorePersist {
     pub fn new() -> Result<Self> {
         let mut path = get_user_path()?;
         path.push("db.db3");
-        let mut conn = Connection::open(path).unwrap();
+        let conn = Connection::open(path).unwrap();
         Ok(Self {
             db_conn: conn
         })
@@ -32,7 +32,7 @@ impl KeyStorePersist {
     pub fn persist_key(&self, key_id: &str, nonce: &str, key: &str) -> Result<()> {
         self.db_conn.execute(
             "INSERT INTO keystore (id, nonce, key) VALUES (?1, ?2, ?3)",
-            (key_id, nonce, key),
+            params![key_id, nonce, key],
         )?;
         Ok(())
     }
@@ -51,9 +51,9 @@ impl KeyStorePersist {
 }
 
 impl<C: Crypto> KeyStore<C> {
-    pub fn persist_key(&self, key_id: &str, key: &Key<C>) -> Result<()> {
-        let (nonce, key) = self.serialize_key_pair(key)?;
-        self.persist.persist_key(&key_id, &nonce, &key)?;
+    pub fn persist_key(&self, key_id: &str, key: Key<C>) -> Result<()> {
+        let (nonce_hashed, key_hashed) = self.serialize_key_pair(key)?;
+        self.persist.persist_key(&key_id, &nonce_hashed, &key_hashed)?;
         Ok(())
     }
 }

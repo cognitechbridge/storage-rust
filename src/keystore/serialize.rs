@@ -12,7 +12,7 @@ use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 
 impl<C: Crypto> KeyStore<C> {
-    pub fn serialize_key_pair(&self, key: &Key<C>) -> Result<(String, String)> {
+    pub fn serialize_key_pair(&self, key: Key<C>) -> Result<(String, String)> {
         let nonce = C::generate_nonce(OsRng);
         let cipher = C::new(&self.root_key);
         let ciphered = map_anyhow_io!(cipher.encrypt(&nonce, key.as_ref()), "Error encrypting data key")?;
