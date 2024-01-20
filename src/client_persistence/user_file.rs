@@ -1,8 +1,10 @@
+use crate::common::{
+    utils::get_user_path
+};
 use std::fs::File;
 use std::io::Read;
 use crate::client_persistence::ClientPersistence;
 use anyhow::Result;
-use crate::utils::get_user_path;
 
 pub struct ClientFolderPersistence {}
 

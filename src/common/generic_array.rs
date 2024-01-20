@@ -1,5 +1,6 @@
 use anyhow::{Result, bail};
 use generic_array::{ArrayLength, GenericArray};
+use uuid::Uuid;
 
 
 pub trait GenericArrayFrom<N, T> where N: ArrayLength<T> {
@@ -14,5 +15,26 @@ impl<N, T> GenericArrayFrom<N, T> for GenericArray<T, N> where N: ArrayLength<T>
         let mut arr: GenericArray<T, N> = Default::default();
         arr.iter_mut().zip(vec).for_each(|(place, element)| *place = element);
         Ok(arr)
+    }
+}
+
+
+pub trait AsGenericArray<N: ArrayLength<u8>> {
+    fn as_generic_array(&self) -> GenericArray<u8, N>;
+}
+
+impl<N: ArrayLength<u8>> AsGenericArray<N> for Uuid {
+    fn as_generic_array(&self) -> GenericArray<u8, N> {
+        let mut arr: GenericArray<u8, N> = Default::default();
+        assert!(N::to_usize() >= 16, "N must be at least 16 to hold a UUID");
+        arr[..16].copy_from_slice(self.as_bytes());
+        arr
+    }
+}
+
+
+impl<N: ArrayLength<u8>> AsGenericArray<N> for GenericArray<u8, N> {
+    fn as_generic_array(&self) -> GenericArray<u8, N> {
+        self.clone()
     }
 }

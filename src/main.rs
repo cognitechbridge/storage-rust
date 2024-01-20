@@ -10,15 +10,18 @@ mod client_persistence;
 mod common;
 
 
-use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, XChaCha20Poly1305};
+use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, ChaCha20Poly1305, XChaCha20Poly1305};
 
 use std::fs::File;
 use std::io::{Read, Write};
+use std::path::Path;
 use crypto_common::KeySizeUser;
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
+use anyhow::Result;
 use crate::client_persistence::ClientPersistence;
-use crate::encryptor::{ToPlainStream, ToEncryptedStream, EncryptionFileHeader};
+use crate::common::Key;
+use crate::encryptor::{ToPlainStream, EncryptionFileHeader, Encryptor};
 use crate::keystore::{KeyStore};
 use crate::storage::*;
 
@@ -38,12 +41,11 @@ async fn main() {
 
     let uuid = Uuid::new_v7(Timestamp::now(NoContext));
 
-    let mut store: KeyStore<XChaCha20Poly1305> = KeyStore::new(key);
-    store.load_from_persist().unwrap();
+    let store_unboxed: KeyStore<XChaCha20Poly1305> = KeyStore::new(key);
+    let mut store = Box::new(store_unboxed);
 
-    let data_key_pair = store.generate_key_pair(&uuid, OsRng).unwrap();
-    let blob = data_key_pair.recovery_blob.to_string();
-    let data_key = data_key_pair.key;
+
+    store.load_from_persist().unwrap();
 
     //let t = ClientFolderPersistence {};
     //ClientFolderPersistence::load_client_config("Test".to_string());
@@ -73,18 +75,7 @@ async fn main() {
 
     let storage = s3::S3Storage::new("ctb-test-2".to_string(), 10 * 1024 * 1024);
 
-    // ************************ Upload *****************************
-
-    let header = EncryptionFileHeader {
-        client_id: "client-id".to_string(),
-        file_id: uuid.to_string(),
-        recovery: blob,
-        chunk_size: 10,
-        ..Default::default()
-    };
-    let mut reader = File::open("D:\\Sample.txt")
-        .unwrap()
-        .to_encrypted_stream::<Crypto>(&data_key, header).unwrap();
+    safe_store_file("D:\\Sample.txt", store);
 
 
     // let mut output_file = File::create("D:\\Test.txt").unwrap();
@@ -131,3 +122,21 @@ async fn main() {
     }
 }
 
+
+pub async fn safe_store_file<P: AsRef<Path>>(path: P, mut store: Box<KeyStore<XChaCha20Poly1305>>) -> Result<()>{
+    let uuid = Uuid::new_v7(Timestamp::now(NoContext));
+
+    let data_key_pair = store.generate_key_pair(&uuid, OsRng).unwrap();
+    let blob = data_key_pair.recovery_blob.to_string();
+    let data_key = data_key_pair.key;
+
+    let file  = File::open("D:\\Sample.txt").expect("Could not open file");
+    let encryptor = Encryptor::new("client-id".to_string(), CHUNK_SIZE);
+    let mut read =  encryptor.encrypt::<ChaCha20Poly1305, _>(file, uuid.to_string(), &data_key, blob)?;
+
+    let storage = s3::S3Storage::new("ctb-test-2".to_string(), 10 * 1024 * 1024);
+
+    storage.upload(&mut read, uuid.to_string()).await.unwrap();
+
+    return Ok(());
+}

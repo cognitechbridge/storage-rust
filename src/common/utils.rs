@@ -1,5 +1,3 @@
-pub mod as_array;
-
 use std::fs::create_dir_all;
 use std::path::PathBuf;
 use regex::Regex;
@@ -18,6 +16,16 @@ pub fn type_name_of<T>() -> Result<String> {
 
 pub fn get_user_path() -> Result<PathBuf> {
     let mut path = dirs::home_dir().ok_or(anyhow!("Cannot find user home"))?;
+    path.push(".ctb");
+    if !path.exists() {
+        create_dir_all(&path)?;
+    }
+    Ok(path)
+}
+
+
+pub fn get_cache_path() -> Result<PathBuf> {
+    let mut path = dirs::cache_dir().ok_or(anyhow!("Cannot find cache folder"))?;
     path.push(".ctb");
     if !path.exists() {
         create_dir_all(&path)?;

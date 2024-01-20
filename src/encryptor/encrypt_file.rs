@@ -3,7 +3,6 @@ use super::{
     constants::{SEPARATOR, ENCRYPTED_FILE_VERSION},
     Crypto, Key, Nonce,
     utils,
-    ToEncryptedStream,
 };
 
 use std::io::Read;
@@ -22,7 +21,7 @@ pub struct EncryptedFileGenerator<'a, R, C> where C: Crypto {
 }
 
 impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where C: Crypto {
-    fn new<T: Read>(source: R, key: &'a Key<C>, header: EncryptionFileHeader<C>) -> Self {
+    pub fn new<T: Read>(source: R, key: &'a Key<C>, header: EncryptionFileHeader<C>) -> Self {
         let chunk_size = header.chunk_size;
         EncryptedFileGenerator {
             source,
@@ -100,16 +99,6 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: Crypto {
             Err(e) => Some(Err(anyhow!(e))),
         };
         ret
-    }
-}
-
-
-impl<T: Read> ToEncryptedStream<T> for T {
-    type Output<'a, C: Crypto> = EncryptedFileGenerator<'a, T, C>;
-    fn to_encrypted_stream<C: Crypto>(self, key: &Key<C>, header: EncryptionFileHeader<C>) ->
-    Result<Self::Output<'_, C>>
-    {
-        Ok(EncryptedFileGenerator::new::<T>(self, key, header))
     }
 }
 

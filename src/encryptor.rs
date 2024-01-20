@@ -1,6 +1,6 @@
 use std::io::Read;
-
 pub use types::*;
+use crate::encryptor::encrypt_file::EncryptedFileGenerator;
 
 
 mod encrypt_file;
@@ -11,10 +11,28 @@ mod constants;
 pub mod types;
 mod file_header;
 
-pub trait ToEncryptedStream<T: Read> {
-    type Output<'a, C: Crypto>: Read;
-    fn to_encrypted_stream<C: Crypto>(self, key: &Key<C>, header: EncryptionFileHeader<C>) ->
-    Result<Self::Output<'_, C>>;
+pub struct Encryptor {
+    pub client_id: String,
+    pub chunk_size: u64,
+}
+
+impl Encryptor {
+    pub fn new(client_id: String, chunk_size: u64) -> Self {
+        Self {
+            client_id,
+            chunk_size,
+        }
+    }
+    pub fn encrypt<'a, C: Crypto, R: Read>(&'a self, source: R, file_id: String, key: &'a Key<C>, recovery: String) -> Result<EncryptedFileGenerator<R, C>> {
+        let header = EncryptionFileHeader {
+            client_id: self.client_id.clone(),
+            chunk_size: self.chunk_size,
+            file_id,
+            recovery,
+            ..Default::default()
+        };
+        Ok(EncryptedFileGenerator::new::<R>(source, key, header))
+    }
 }
 
 pub trait ToPlainStream<Y: Read> {
