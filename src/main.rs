@@ -4,9 +4,7 @@ mod encryptor;
 #[macro_use]
 mod macros;
 mod storage;
-mod keystore;
-mod client_persistence;
-mod common;
+mod keystore;mod common;
 mod file_system;
 mod persistence;
 
@@ -27,7 +25,6 @@ use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
 use anyhow::Result;
 use tempfile::NamedTempFile;
-use crate::client_persistence::ClientPersistence;
 use crate::encryptor::{Decryptor, Encryptor};
 use crate::file_system::PersistFileSystem;
 use crate::keystore::{PersistKeyStore, SerializedPersistKeyStore};
