@@ -9,6 +9,5 @@ pub async fn get_s3_client() -> Client {
         .load()
         .await;
 
-    let client = Client::new(&config);
-    client
+    Client::new(&config)
 }

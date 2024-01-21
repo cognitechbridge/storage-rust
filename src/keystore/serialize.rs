@@ -17,8 +17,8 @@ impl<C: Crypto> PersistKeyStore<C> {
         let cipher = C::new(&self.root_key);
         let ciphered = map_anyhow_io!(cipher.encrypt(&nonce, key.as_ref()), "Error encrypting data key")?;
         let res = (
-            String::from(BASE64_STANDARD.encode(nonce)),
-            String::from(BASE64_STANDARD.encode(ciphered))
+            BASE64_STANDARD.encode(nonce),
+            BASE64_STANDARD.encode(ciphered)
         );
         Ok(res)
     }

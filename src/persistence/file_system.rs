@@ -16,7 +16,7 @@ impl crate::file_system::FileSystemPersist for SqlLiteConnection {
         match self.db_conn.query_row(
             "SELECT id FROM filesystem WHERE path = ?1",
             params![path],
-            |row| Ok(row.get(0)?),
+            |row| row.get(0),
         ) {
             Ok(key) => Ok(Some(key)),
             Err(Error::QueryReturnedNoRows) => Ok(None),

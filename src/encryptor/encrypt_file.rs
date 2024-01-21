@@ -21,7 +21,7 @@ pub struct EncryptedFileGenerator<'a, R, C> where C: Crypto {
 }
 
 impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where C: Crypto {
-    pub fn new<T: Read>(source: R, key: &'a Key<C>, header: EncryptionFileHeader<C>) -> Self {
+    pub fn new(source: R, key: &'a Key<C>, header: EncryptionFileHeader<C>) -> Self {
         let chunk_size = header.chunk_size;
         EncryptedFileGenerator {
             source,
@@ -88,7 +88,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: Crypto {
     pub fn read_bytes_encrypted(&mut self) -> Option<Result<Vec<u8>>> {
         let mut buffer = vec![0u8; self.chunk_size];
         let res = self.source.read(&mut buffer);
-        let ret = match res {
+        match res {
             Ok(count) => {
                 if count > 0 {
                     Some(super::core::encrypt_chunk::<C>(&buffer[..count].to_vec(), self.key, &self.nonce))
@@ -97,8 +97,7 @@ impl<'a, R, C> EncryptedFileGenerator<'a, R, C> where R: Read, C: Crypto {
                 }
             }
             Err(e) => Some(Err(anyhow!(e))),
-        };
-        ret
+        }
     }
 }
 

@@ -21,7 +21,7 @@ impl SqlLiteConnection {
 
     pub fn init(&mut self) -> anyhow::Result<()> {
         let migrations = migrations::get_migrations();
-        self.db_conn.pragma_update(None, "journal_mode", &"WAL").unwrap();
+        self.db_conn.pragma_update(None, "journal_mode", "WAL").unwrap();
         migrations.to_latest(&mut self.db_conn)?;
         Ok(())
     }

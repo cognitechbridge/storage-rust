@@ -36,6 +36,6 @@ pub fn get_cache_path() -> Result<PathBuf> {
 
 
 pub fn base64_decode(str: &str) -> Result<Vec<u8>> {
-    let vec = BASE64_STANDARD.decode(str.trim().to_string())?;
+    let vec = BASE64_STANDARD.decode(str.trim())?;
     Ok(vec)
 }

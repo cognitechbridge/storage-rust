@@ -8,28 +8,21 @@ mod keystore;mod common;
 mod file_system;
 mod persistence;
 
-
-use crate::common::{
-    utils::get_cache_path
-};
-
 use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, ChaCha20Poly1305, XChaCha20Poly1305};
 
 use std::fs::File;
 use std::io;
-use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::Arc;
-use crypto_common::KeySizeUser;
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
 use anyhow::Result;
 use tempfile::NamedTempFile;
 use crate::encryptor::{Decryptor, Encryptor};
 use crate::file_system::PersistFileSystem;
-use crate::keystore::{PersistKeyStore, SerializedPersistKeyStore};
+use crate::keystore::PersistKeyStore;
 use crate::persistence::SqlLiteConnection;
-use crate::storage::*;
+use crate::storage::{s3, StorageDownload, StorageUpload};
 
 type KeyStore = PersistKeyStore<XChaCha20Poly1305>;
 
@@ -43,7 +36,7 @@ async fn main() {
     let mut key = Crypto::generate_key(&mut OsRng);
 
     for i in 0..key.len() {
-        key[i] = 0 as u8;
+        key[i] = 0_u8;
     }
 
     let storage = s3::S3Storage::new("ctb-test-2", 10 * 1024 * 1024);
@@ -84,7 +77,7 @@ pub async fn download
     -> Result<()>
 {
     //Get file id
-    let file_id = file_store.get_path(&friendly_path)?.expect("File not found");
+    let file_id = file_store.get_path(friendly_path)?.expect("File not found");
 
     //Get data key
     let data_key = store.get(&file_id).expect("Key not found").expect("Key not found");
@@ -96,7 +89,7 @@ pub async fn download
     storage.download(&mut temp_file, &file_id).await?;
 
     //Decrypt the file
-    let mut decryptor = Decryptor::<Crypto>::new();
+    let decryptor = Decryptor::<Crypto>::new();
     let mut file = decryptor.decrypt(&data_key, temp_file.reopen()?).expect("Could not decrypt the file.");
 
     //Write to output file
@@ -139,5 +132,5 @@ pub async fn safe_store_file
     //Save file path
     file_store.save_path(&uuid.to_string(), friendly_path)?;
 
-    return Ok(uuid.to_string());
+    Ok(uuid.to_string())
 }

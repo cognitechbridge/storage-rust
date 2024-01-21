@@ -35,7 +35,7 @@ impl<C: Crypto> Encryptor<C> {
             recovery: String::from(recovery),
             ..Default::default()
         };
-        Ok(EncryptedFileGenerator::new::<R>(source, key, header))
+        Ok(EncryptedFileGenerator::new(source, key, header))
     }
 }
 

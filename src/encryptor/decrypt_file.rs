@@ -56,7 +56,7 @@ impl<'a, T, C> Read for ReaderDecryptor<'a, T, C> where T: Read, C: Crypto {
             };
             self.chunk_counter += 1;
             let mut decrypted_data = map_anyhow_io!(
-                core::decrypt_chunk::<C>(&buffer[..bytes_read].to_vec(),&self.key,&self.nonce),
+                core::decrypt_chunk::<C>(&buffer[..bytes_read].to_vec(),self.key,&self.nonce),
                 format!("Error decrypting chunk {}", self.chunk_counter)
             )?;
             self.buffer.append(&mut decrypted_data);
@@ -85,8 +85,8 @@ fn read_file_header<C>(source: &mut impl Read) -> Result<EncryptionFileHeader<C>
 
 fn read_file_version(source: &mut (impl Read + Sized)) -> Result<()> {
     let mut buffer = [0u8; 1];
-    source.read(&mut buffer)?;
-    if buffer[0] != 1u8 {
+    let n = source.read(&mut buffer)?;
+    if buffer[0] != 1u8 || n != 1 {
         bail!("File version invalid")
     }
     Ok(())
@@ -95,12 +95,18 @@ fn read_file_version(source: &mut (impl Read + Sized)) -> Result<()> {
 fn read_header<C>(source: &mut (impl Read + Sized)) -> Result<EncryptionFileHeader<C>> {
     //Read context size
     let mut buffer_2 = [0u8; 2];
-    source.read(&mut buffer_2)?;
+    let n = source.read(&mut buffer_2)?;
+    if n != 2 {
+        bail!("Error reading context size")
+    }
     let context_size = u16::from_le_bytes(buffer_2);
 
     //Read context
     let mut buffer_context = vec![0; context_size as usize];
-    source.read(&mut buffer_context)?;
+    let n = source.read(&mut buffer_context)?;
+    if n != context_size as usize {
+        bail!("Error reading context")
+    }
 
     let file_header = map_anyhow_io!(
         serde_json::from_slice(buffer_context.as_slice()),
@@ -114,10 +120,10 @@ fn read_chunk_header(source: &mut impl Read) -> Result<()> {
     let mut small_buffer = [0u8; 4];
     let size = source.read(&mut small_buffer)?;
     if size == 0 { return Ok(()); }
-    return if size == 4 && small_buffer.iter().all(|&x| x == 0u8)
+    if size == 4 && small_buffer.iter().all(|&x| x == 0u8)
     {
         Ok(())
     } else {
         bail!("Chunk header is not valid: {:?}", small_buffer);
-    };
+    }
 }
