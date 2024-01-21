@@ -17,7 +17,7 @@ use crate::common::{
 
 use chacha20poly1305::{aead::{KeyInit, OsRng}, ChaCha20Poly1305 as Crypto, ChaCha20Poly1305, XChaCha20Poly1305};
 
-use std::fs::{File, remove_file};
+use std::fs::File;
 use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
@@ -26,6 +26,7 @@ use crypto_common::KeySizeUser;
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
 use anyhow::Result;
+use tempfile::NamedTempFile;
 use crate::client_persistence::ClientPersistence;
 use crate::encryptor::{Decryptor, Encryptor};
 use crate::file_system::PersistFileSystem;
@@ -40,19 +41,6 @@ const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 #[tokio::main]
 async fn main() {
     println!("Hello, world!");
-
-    // let mut path = get_user_path().unwrap();
-    // path.push("key_store_sqlite");
-    // let mut conn = Connection::open(path).unwrap();
-    //
-    // let migrations = Migrations::new(vec![
-    //     M::up(
-    //         "CREATE TABLE keystore(id TEXT PRIMARY KEY, nonce TEXT NULL, key TEXT NOT NULL);"
-    //     ),
-    // ]);
-    //
-    // conn.pragma_update(None, "journal_mode", &"WAL").unwrap();
-    // migrations.to_latest(&mut conn).unwrap();
 
 
     let mut key = Crypto::generate_key(&mut OsRng);
@@ -84,18 +72,20 @@ async fn main() {
         .await.expect("Could not upload the file");
 
 
-    download("D:\\Sample-2.txt", friendly_path, &mut key_store, &storage, &file_store)
+    download("D:\\Sample-2.txt", friendly_path, &key_store, &storage, &file_store)
         .await.expect("Could not download file");
-
 }
 
-pub async fn download(
+pub async fn download
+(
     path: impl AsRef<Path>,
     friendly_path: &str,
-    store: &mut Box<KeyStore>,
+    store: &KeyStore,
     storage: &impl StorageDownload,
     file_store: &PersistFileSystem,
-) -> Result<()> {
+)
+    -> Result<()>
+{
     //Get file id
     let file_id = file_store.get_path(&friendly_path)?.expect("File not found");
 
@@ -103,33 +93,32 @@ pub async fn download(
     let data_key = store.get(&file_id).expect("Key not found").expect("Key not found");
 
     //Create temp file
-    let mut cache_file_path = get_cache_path()?;
-    cache_file_path.push(file_id.clone());
-    let mut file = File::create(cache_file_path.clone()).unwrap();
+    let mut temp_file = NamedTempFile::new()?;
 
     //Download to temp file
-    storage.download(&mut file, file_id.clone()).await?;
+    storage.download(&mut temp_file, file_id.clone()).await?;
 
     //Decrypt the file
-    let file_dc = File::open(cache_file_path.clone()).expect("Can not open the file");
     let mut decryptor = Decryptor::<Crypto>::new();
-    let mut file = decryptor.decrypt(&data_key, file_dc).expect("Could not decrypt the file.");
+    let mut file = decryptor.decrypt(&data_key, temp_file.reopen()?).expect("Could not decrypt the file.");
 
     //Write to output file
     let mut output_file = File::create(path).unwrap();
     io::copy(&mut file, &mut output_file)?;
 
-    //Remove temp file
-    remove_file(cache_file_path)?;
     Ok(())
 }
 
-pub async fn safe_store_file(
+pub async fn safe_store_file
+(
     path: impl AsRef<Path>,
     friendly_path: &str,
-    store: &mut Box<KeyStore>,
+    store: &mut KeyStore,
     storage: &impl StorageUpload,
-    file_store: &PersistFileSystem) -> Result<String> {
+    file_store: &PersistFileSystem,
+)
+    -> Result<String>
+{
     //Open file
     let file = File::open(path).expect("Could not open file");
 
