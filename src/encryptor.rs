@@ -20,18 +20,18 @@ pub struct Encryptor<C: Crypto> {
 }
 
 impl<C: Crypto> Encryptor<C> {
-    pub fn new(client_id: String, chunk_size: u64) -> Self {
+    pub fn new(client_id: &str, chunk_size: u64) -> Self {
         Self {
-            client_id,
+            client_id: String::from(client_id),
             chunk_size,
             alg: PhantomData,
         }
     }
-    pub fn encrypt<'a, R: Read>(&'a self, source: R, file_id: String, key: &'a Key<C>, recovery: &str) -> Result<EncryptedFileGenerator<R, C>> {
+    pub fn encrypt<'a, R: Read>(&'a self, source: R, file_id: &str, key: &'a Key<C>, recovery: &str) -> Result<EncryptedFileGenerator<R, C>> {
         let header = EncryptionFileHeader {
             client_id: self.client_id.clone(),
             chunk_size: self.chunk_size,
-            file_id,
+            file_id: String::from(file_id),
             recovery: String::from(recovery),
             ..Default::default()
         };

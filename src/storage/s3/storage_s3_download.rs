@@ -4,7 +4,7 @@ use super::{S3Storage, client};
 
 
 impl StorageDownload for S3Storage {
-    async fn download<W: Write>(&self, writer: &mut W, key: String) -> anyhow::Result<usize>
+    async fn download<W: Write>(&self, writer: &mut W, key: &str) -> anyhow::Result<usize>
     {
         let client = client::get_s3_client().await;
 

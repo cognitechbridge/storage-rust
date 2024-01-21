@@ -8,7 +8,7 @@ use super::{S3Storage, client};
 use super::super::StorageUpload;
 
 impl StorageUpload for S3Storage {
-    async fn upload<R: Read>(& self, reader: &mut R, key: String) -> anyhow::Result<()>
+    async fn upload<R: Read>(& self, reader: &mut R, key: &str) -> anyhow::Result<()>
         where
             R: Read,
     {
@@ -18,7 +18,7 @@ impl StorageUpload for S3Storage {
         let multipart_upload_res: CreateMultipartUploadOutput = client
             .create_multipart_upload()
             .bucket(bucket_name)
-            .key(&key)
+            .key(key)
             .send()
             .await?;
         let upload_id = multipart_upload_res.upload_id().ok_or(anyhow!("S3 upload id not returned"))?;
@@ -36,7 +36,7 @@ impl StorageUpload for S3Storage {
             let byte_stream = ByteStream::from(buffer[..bytes_read].to_vec());
             let upload_part_res = client
                 .upload_part()
-                .key(&key)
+                .key(key)
                 .bucket(&self.bucket_name)
                 .upload_id(upload_id)
                 .body(byte_stream)
@@ -60,7 +60,7 @@ impl StorageUpload for S3Storage {
         let _complete_multipart_upload_res = client
             .complete_multipart_upload()
             .bucket(&self.bucket_name)
-            .key(&key)
+            .key(key)
             .multipart_upload(completed_multipart_upload)
             .upload_id(upload_id)
             .send()

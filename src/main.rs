@@ -46,7 +46,7 @@ async fn main() {
         key[i] = 0 as u8;
     }
 
-    let storage = s3::S3Storage::new(String::from("ctb-test-2"), 10 * 1024 * 1024);
+    let storage = s3::S3Storage::new("ctb-test-2", 10 * 1024 * 1024);
 
     //Create sqlite connection
     let mut sql_connection = SqlLiteConnection::new().expect("Cannot create sql");
@@ -93,7 +93,7 @@ pub async fn download
     let mut temp_file = NamedTempFile::new()?;
 
     //Download to temp file
-    storage.download(&mut temp_file, file_id.clone()).await?;
+    storage.download(&mut temp_file, &file_id).await?;
 
     //Decrypt the file
     let mut decryptor = Decryptor::<Crypto>::new();
@@ -127,14 +127,14 @@ pub async fn safe_store_file
 
     //Crate encrypt and encrypt
     let encryptor = Encryptor::<ChaCha20Poly1305>::new(
-        String::from("client-id"),
+        "client-id",
         CHUNK_SIZE,
     );
     let mut read = encryptor
-        .encrypt(file, uuid.to_string(), &data_key_pair.key, &data_key_pair.recovery_blob)?;
+        .encrypt(file, &uuid.to_string(), &data_key_pair.key, &data_key_pair.recovery_blob)?;
 
     //Upload
-    storage.upload(&mut read, uuid.to_string()).await?;
+    storage.upload(&mut read, &uuid.to_string()).await?;
 
     //Save file path
     file_store.save_path(&uuid.to_string(), friendly_path)?;

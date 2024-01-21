@@ -8,9 +8,9 @@ pub struct S3Storage {
 }
 
 impl S3Storage {
-    pub fn new(bucket_name: String, chunk_size: usize) -> Self {
+    pub fn new(bucket_name: &str, chunk_size: usize) -> Self {
         Self {
-            bucket_name,
+            bucket_name: String::from(bucket_name),
             chunk_size,
         }
     }
