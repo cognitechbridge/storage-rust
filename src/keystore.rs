@@ -1,53 +1,40 @@
 mod serialize;
 mod recovery;
-mod generate_key;
 mod persistence;
 
 use anyhow::Result;
-use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::sync::Arc;
 use crate::common::{Crypto, Key, Nonce};
-use crate::keystore::persistence::KeyStorePersist;
+pub use persistence::SerializedPersistKeyStore;
 
-pub struct KeyStore<C: Crypto> {
+pub struct PersistKeyStore<C: Crypto> {
     root_key: Key<C>,
-    recovery_key: Option<Key<C>>,
-    persist: KeyStorePersist,
+    persist: Arc<dyn SerializedPersistKeyStore>,
     alg: PhantomData<C>,
 }
 
-impl<C: Crypto> Default for KeyStore<C> {
-    fn default() -> Self {
-        let persist = KeyStorePersist::new().unwrap();
-        KeyStore {
-            root_key: Default::default(),
-            recovery_key: Default::default(),
-            persist,
-            alg: PhantomData,
-        }
-    }
-}
 
-impl<C: Crypto> KeyStore<C> {
-    pub fn new(root_key: Key<C>) -> Self <> {
-        KeyStore {
+impl<C: Crypto> PersistKeyStore<C> {
+    pub fn new(root_key: Key<C>, persist: Arc<dyn SerializedPersistKeyStore>) -> Self <> {
+        PersistKeyStore {
             root_key,
-            ..Default::default()
+            persist,
+            alg: Default::default(),
         }
     }
 
-    pub fn init(&mut self) -> Result<()> {
-        self.persist.init()?;
+    fn persist_key(&self, key_id: &str, key: Key<C>, tag: &str) -> Result<()> {
+        let (nonce_hashed, key_hashed) = self.serialize_key_pair(key)?;
+        self.persist.save_key(&key_id, &nonce_hashed, &key_hashed, tag)?;
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn insert(&mut self, key_id: &str, key: Key<C>) -> Result<()> {
-        self.persist_key(key_id, key)?;
+        self.persist_key(key_id, key, "DK")?;
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn get(&self, key_id: &str) -> Result<Option<Key<C>>> {
         let res = self.persist.get_key(key_id)?;
         match res {
@@ -55,6 +42,17 @@ impl<C: Crypto> KeyStore<C> {
             Some((nonce, key)) => {
                 let key = self.deserialize_key_pair(&nonce, &key)?.clone();
                 Ok(Some(key))
+            }
+        }
+    }
+
+    pub fn get_with_tag(&self, tag: &str) -> Result<Option<(String, Key<C>)>> {
+        let res = self.persist.get_with_tag(tag)?;
+        match res {
+            None => Ok(None),
+            Some((id, nonce, key)) => {
+                let key = self.deserialize_key_pair(&nonce, &key)?.clone();
+                Ok(Some((id, key)))
             }
         }
     }

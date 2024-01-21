@@ -7,6 +7,8 @@ mod storage;
 mod keystore;
 mod client_persistence;
 mod common;
+mod file_system;
+mod persistence;
 
 
 use crate::common::{
@@ -19,16 +21,19 @@ use std::fs::{File, remove_file};
 use std::io;
 use std::io::{Read, Write};
 use std::path::Path;
+use std::sync::Arc;
 use crypto_common::KeySizeUser;
 use uuid::{NoContext, Uuid};
 use uuid::timestamp::Timestamp;
 use anyhow::Result;
 use crate::client_persistence::ClientPersistence;
 use crate::encryptor::{Decryptor, Encryptor};
-use crate::keystore::{KeyStore};
+use crate::file_system::PersistFileSystem;
+use crate::keystore::{PersistKeyStore, SerializedPersistKeyStore};
+use crate::persistence::SqlLiteConnection;
 use crate::storage::*;
 
-type KeySize = <Crypto as KeySizeUser>::KeySize;
+type KeyStore = PersistKeyStore<XChaCha20Poly1305>;
 
 const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 
@@ -58,124 +63,95 @@ async fn main() {
 
     let storage = s3::S3Storage::new(String::from("ctb-test-2"), 10 * 1024 * 1024);
 
-    let mut store = Box::new(KeyStore::new(key));
-    store.init().expect("Cannot init store");
-    if store.get_recovery_key().is_none() {
-        store.set_recover_key(key).expect("Cannot set recovery key");
+    //Create sqlite connection
+    let mut sql_connection = SqlLiteConnection::new().expect("Cannot create sql");
+    sql_connection.init().expect("Cannot init sql");
+    let sql = Arc::new(sql_connection);
+
+    //Create file store
+    let file_store = Box::new(PersistFileSystem::new(sql.clone()));
+
+    //Create key store
+    let mut key_store = Box::new(PersistKeyStore::new(key, sql));
+    if key_store.get_recovery_key().is_none() {
+        let uuid = Uuid::new_v7(Timestamp::now(NoContext));
+        key_store.set_recover_key(&uuid.to_string(), key).expect("Cannot set recovery key");
     }
-    //store.load_from_persist().unwrap();
 
+    let friendly_path = "Sample.txt";
 
-    let file_id = safe_store_file("D:\\Sample.txt", &mut store, &storage)
+    safe_store_file("D:\\Sample.txt", friendly_path, &mut key_store, &storage, &file_store)
         .await.expect("Could not upload the file");
 
-    download("D:\\Sample-2.txt", file_id, &mut store, &storage)
+
+    download("D:\\Sample-2.txt", friendly_path, &mut key_store, &storage, &file_store)
         .await.expect("Could not download file");
 
-
-    // let x = type_name_of::<ChaCha20Poly1305>().unwrap();
-    // println!("{}", x);
-
-    // ************************ Generate Sample file *****************************
-
-    // let mut file = File::create("D:\\Sample.txt").expect("Could not create sample file.");
-    // // Loop until the file is 5 chunks.
-    // while file.metadata().unwrap().len() <= CHUNK_SIZE * 4 {
-    //     let rand_string = "CTB CTB CTB CTB CTB CTB CTB CTB CTB CTB CTB CTB CTB CTB CTB CTB CTB CTB CTB CTB ";
-    //     let return_string: String = "\n".to_string();
-    //     file.write_all(rand_string.as_ref())
-    //         .expect("Error writing to file.");
-    //     file.write_all(return_string.as_ref())
-    //         .expect("Error writing to file.");
-    // }
-
-    // ***************** Storage ***********************************
-
-
-    // let mut output_file = File::create("D:\\Test.txt").unwrap();
-    // let mut buffer = vec![0; 1024 * 1024 * 100];
-    // loop {
-    //     // Read up to 1KB from the input file
-    //     let bytes_read = reader.read(&mut buffer).unwrap();
-    //
-    //     // If no bytes were read, end of file is reached
-    //     if bytes_read == 0 {
-    //         break;
-    //     }
-    //
-    //     // Write the bytes to the output file
-    //     output_file.write_all(&buffer[..bytes_read]).unwrap();
-    // }
-
-
-    // ************************ Download *****************************
-
-    // let download_file_path = "D:\\Sample-Encrypted.txt";
-    // let decrypt_file_path = "D:\\Sample-UnEncrypted.txt";
-    // //
-    // let mut file = File::create(download_file_path).unwrap();
-    // storage.download(&mut file, uuid.to_string()).await.unwrap();
-    //
-    // let mut file = File::open(download_file_path).unwrap().to_plain_stream::<Crypto>(&data_key);
-    // let mut output_file = File::create(decrypt_file_path).unwrap();
-    // let mut buffer = vec![0; 1024 * 1024 * 100];
-    // loop {
-    //     // Read up to 1KB from the input file
-    //     let bytes_read = file.read(&mut buffer).unwrap();
-    //
-    //     // If no bytes were read, end of file is reached
-    //     if bytes_read == 0 {
-    //         break;
-    //     }
-    //
-    //     // Write the bytes to the output file
-    //     output_file.write_all(&buffer[..bytes_read]).unwrap();
-    // }
 }
 
 pub async fn download(
     path: impl AsRef<Path>,
-    file_id: String,
-    store: &mut Box<KeyStore<XChaCha20Poly1305>>,
+    friendly_path: &str,
+    store: &mut Box<KeyStore>,
     storage: &impl StorageDownload,
+    file_store: &PersistFileSystem,
 ) -> Result<()> {
-    let mut cache_file_path = get_cache_path()?;
-    cache_file_path.push(file_id.clone());
+    //Get file id
+    let file_id = file_store.get_path(&friendly_path)?.expect("File not found");
 
-    let mut file = File::create(cache_file_path.clone()).unwrap();
-    storage.download(&mut file, file_id.clone()).await?;
-
+    //Get data key
     let data_key = store.get(&file_id).expect("Key not found").expect("Key not found");
 
+    //Create temp file
+    let mut cache_file_path = get_cache_path()?;
+    cache_file_path.push(file_id.clone());
+    let mut file = File::create(cache_file_path.clone()).unwrap();
+
+    //Download to temp file
+    storage.download(&mut file, file_id.clone()).await?;
+
+    //Decrypt the file
     let file_dc = File::open(cache_file_path.clone()).expect("Can not open the file");
     let mut decryptor = Decryptor::<Crypto>::new();
     let mut file = decryptor.decrypt(&data_key, file_dc).expect("Could not decrypt the file.");
+
+    //Write to output file
     let mut output_file = File::create(path).unwrap();
     io::copy(&mut file, &mut output_file)?;
+
+    //Remove temp file
     remove_file(cache_file_path)?;
     Ok(())
 }
 
 pub async fn safe_store_file(
     path: impl AsRef<Path>,
-    store: &mut Box<KeyStore<XChaCha20Poly1305>>,
-    storage: &impl StorageUpload) -> Result<String> {
+    friendly_path: &str,
+    store: &mut Box<KeyStore>,
+    storage: &impl StorageUpload,
+    file_store: &PersistFileSystem) -> Result<String> {
+    //Open file
     let file = File::open(path).expect("Could not open file");
 
+    //Create id
+    let uuid = Uuid::new_v7(Timestamp::now(NoContext));
+
+    //Create data key
+    let data_key_pair = store.generate_key_pair(&uuid, OsRng).unwrap();
+
+    //Crate encrypt and encrypt
     let encryptor = Encryptor::<ChaCha20Poly1305>::new(
         String::from("client-id"),
         CHUNK_SIZE,
     );
-
-    let uuid = Uuid::new_v7(Timestamp::now(NoContext));
-    let data_key_pair = store.generate_key_pair(&uuid, OsRng).unwrap();
-    let blob = data_key_pair.recovery_blob.to_string();
-    let data_key = data_key_pair.key;
-
     let mut read = encryptor
-        .encrypt(file, uuid.to_string(), &data_key, blob)?;
+        .encrypt(file, uuid.to_string(), &data_key_pair.key, &data_key_pair.recovery_blob)?;
 
+    //Upload
     storage.upload(&mut read, uuid.to_string()).await?;
+
+    //Save file path
+    file_store.save_path(&uuid.to_string(), friendly_path)?;
 
     return Ok(uuid.to_string());
 }

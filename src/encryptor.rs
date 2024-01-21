@@ -27,12 +27,12 @@ impl<C: Crypto> Encryptor<C> {
             alg: PhantomData,
         }
     }
-    pub fn encrypt<'a, R: Read>(&'a self, source: R, file_id: String, key: &'a Key<C>, recovery: String) -> Result<EncryptedFileGenerator<R, C>> {
+    pub fn encrypt<'a, R: Read>(&'a self, source: R, file_id: String, key: &'a Key<C>, recovery: &str) -> Result<EncryptedFileGenerator<R, C>> {
         let header = EncryptionFileHeader {
             client_id: self.client_id.clone(),
             chunk_size: self.chunk_size,
             file_id,
-            recovery,
+            recovery: String::from(recovery),
             ..Default::default()
         };
         Ok(EncryptedFileGenerator::new::<R>(source, key, header))

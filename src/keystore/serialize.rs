@@ -1,5 +1,5 @@
 use super::{
-    KeyStore,
+    PersistKeyStore,
     Crypto, Key, Nonce,
 };
 use crate::common::{
@@ -11,7 +11,7 @@ use anyhow::Result;
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 
-impl<C: Crypto> KeyStore<C> {
+impl<C: Crypto> PersistKeyStore<C> {
     pub fn serialize_key_pair(&self, key: Key<C>) -> Result<(String, String)> {
         let nonce = C::generate_nonce(OsRng);
         let cipher = C::new(&self.root_key);
