@@ -6,13 +6,6 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use crate::common::{Crypto, Key, Nonce};
 
-
-pub trait KeyStorePersist {
-    fn save_key(&self, key_id: &str, nonce: &str, key: &str, tag: &str) -> Result<()>;
-    fn get_key(&self, key_id: &str) -> Result<Option<(String, String)>>;
-    fn get_with_tag(&self, tag: &str) -> Result<Option<(String, String, String)>>;
-}
-
 pub struct KeyStore<C: Crypto> {
     root_key: Key<C>,
     persist: Arc<dyn KeyStorePersist>,
@@ -31,7 +24,13 @@ impl<C: Crypto> KeyStore<C> {
 
     fn persist_key(&self, key_id: &str, key: &Key<C>, tag: &str) -> Result<()> {
         let (nonce_hashed, key_hashed) = self.serialize_key_pair(key)?;
-        self.persist.save_key(key_id, &nonce_hashed, &key_hashed, tag)?;
+        let sk = SerializedKey {
+            id: String::from(key_id),
+            nonce: nonce_hashed,
+            key: key_hashed,
+            tag: String::from(tag),
+        };
+        self.persist.save_key(sk)?;
         Ok(())
     }
 
@@ -44,8 +43,8 @@ impl<C: Crypto> KeyStore<C> {
         let res = self.persist.get_key(key_id)?;
         match res {
             None => Ok(None),
-            Some((nonce, key)) => {
-                let key = self.deserialize_key_pair(&nonce, &key)?.clone();
+            Some(sk) => {
+                let key = self.deserialize_key_pair(&sk.nonce, &sk.key)?.clone();
                 Ok(Some(key))
             }
         }
@@ -55,10 +54,23 @@ impl<C: Crypto> KeyStore<C> {
         let res = self.persist.get_with_tag(tag)?;
         match res {
             None => Ok(None),
-            Some((id, nonce, key)) => {
-                let key = self.deserialize_key_pair(&nonce, &key)?.clone();
-                Ok(Some((id, key)))
+            Some(sk) => {
+                let key = self.deserialize_key_pair(&sk.nonce, &sk.key)?.clone();
+                Ok(Some((sk.id, key)))
             }
         }
     }
+}
+
+pub struct SerializedKey {
+    pub id: String,
+    pub nonce: String,
+    pub key: String,
+    pub tag: String,
+}
+
+pub trait KeyStorePersist {
+    fn save_key(&self, serialized_key: SerializedKey) -> Result<()>;
+    fn get_key(&self, key_id: &str) -> Result<Option<SerializedKey>>;
+    fn get_with_tag(&self, tag: &str) -> Result<Option<SerializedKey>>;
 }
