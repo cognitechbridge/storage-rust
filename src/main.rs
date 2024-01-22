@@ -20,11 +20,10 @@ use anyhow::Result;
 use tempfile::NamedTempFile;
 use crate::encryptor::{Decryptor, Encryptor};
 use crate::file_system::PersistFileSystem;
-use crate::keystore::PersistKeyStore;
 use crate::persistence::SqlLiteConnection;
 use crate::storage::{s3, StorageDownload, StorageUpload};
 
-type KeyStore = PersistKeyStore<XChaCha20Poly1305>;
+type KeyStore = keystore::KeyStore<XChaCha20Poly1305>;
 
 const CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 
@@ -50,7 +49,7 @@ async fn main() {
     let file_store = Box::new(PersistFileSystem::new(sql.clone()));
 
     //Create key store
-    let mut key_store = Box::new(PersistKeyStore::new(key, sql));
+    let mut key_store = Box::new(KeyStore::new(key, sql));
     if key_store.get_recovery_key().is_none() {
         let uuid = Uuid::new_v7(Timestamp::now(NoContext));
         key_store.set_recover_key(&uuid.to_string(), key).expect("Cannot set recovery key");

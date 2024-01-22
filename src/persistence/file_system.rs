@@ -3,7 +3,7 @@ use anyhow::Result;
 use rusqlite::{Error, params};
 use crate::persistence::SqlLiteConnection;
 
-impl crate::file_system::FileSystemPersist for SqlLiteConnection {
+impl crate::file_system::FileSystem for SqlLiteConnection {
     fn save_path(&self, path: &str, key: &str) -> Result<()> {
         self.db_conn.execute(
             "INSERT INTO filesystem (id, path) VALUES (?1, ?2)",

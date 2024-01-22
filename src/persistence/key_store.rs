@@ -2,7 +2,7 @@ use anyhow::bail;
 use rusqlite::{Error, params};
 use crate::persistence::SqlLiteConnection;
 
-impl crate::keystore::SerializedPersistKeyStore for SqlLiteConnection {
+impl crate::keystore::KeyStorePersist for SqlLiteConnection {
 
     fn save_key(&self, id: &str, nonce: &str, key: &str, tag: &str) -> anyhow::Result<()> {
         self.db_conn.execute(

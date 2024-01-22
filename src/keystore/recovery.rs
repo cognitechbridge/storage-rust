@@ -1,4 +1,4 @@
-use super::{Crypto, PersistKeyStore, Key};
+use super::{Crypto, KeyStore, Key};
 use crate::common::{
     utils::type_name_of,
 };
@@ -35,7 +35,7 @@ pub struct Recovery {
     pub id: String,
 }
 
-impl<C: Crypto> PersistKeyStore<C> {
+impl<C: Crypto> KeyStore<C> {
     pub fn get_recovery_key(&self) -> Option<(String, Key<C>)> {
         self.get_with_tag(RECOVERY_TAG).expect("Error getting recovery key")
     }

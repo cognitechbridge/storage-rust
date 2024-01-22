@@ -1,23 +1,28 @@
 mod serialize;
 mod recovery;
-mod persistence;
 
 use anyhow::Result;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use crate::common::{Crypto, Key, Nonce};
-pub use persistence::SerializedPersistKeyStore;
 
-pub struct PersistKeyStore<C: Crypto> {
+
+pub trait KeyStorePersist {
+    fn save_key(&self, key_id: &str, nonce: &str, key: &str, tag: &str) -> Result<()>;
+    fn get_key(&self, key_id: &str) -> Result<Option<(String, String)>>;
+    fn get_with_tag(&self, tag: &str) -> Result<Option<(String, String, String)>>;
+}
+
+pub struct KeyStore<C: Crypto> {
     root_key: Key<C>,
-    persist: Arc<dyn SerializedPersistKeyStore>,
+    persist: Arc<dyn KeyStorePersist>,
     alg: PhantomData<C>,
 }
 
 
-impl<C: Crypto> PersistKeyStore<C> {
-    pub fn new(root_key: Key<C>, persist: Arc<dyn SerializedPersistKeyStore>) -> Self <> {
-        PersistKeyStore {
+impl<C: Crypto> KeyStore<C> {
+    pub fn new(root_key: Key<C>, persist: Arc<dyn KeyStorePersist>) -> Self <> {
+        KeyStore {
             root_key,
             persist,
             alg: Default::default(),
