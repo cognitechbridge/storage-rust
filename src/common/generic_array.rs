@@ -19,12 +19,12 @@ impl<N, T> GenericArrayFrom<N, T> for GenericArray<T, N> where N: ArrayLength<T>
 }
 
 
-pub trait AsGenericArray<N: ArrayLength<u8>> {
-    fn as_generic_array(&self) -> GenericArray<u8, N>;
+pub trait ToGenericArray<N: ArrayLength<u8>> {
+    fn to_generic_array(self) -> GenericArray<u8, N>;
 }
 
-impl<N: ArrayLength<u8>> AsGenericArray<N> for Uuid {
-    fn as_generic_array(&self) -> GenericArray<u8, N> {
+impl<N: ArrayLength<u8>> ToGenericArray<N> for Uuid {
+    fn to_generic_array(self) -> GenericArray<u8, N> {
         let mut arr: GenericArray<u8, N> = Default::default();
         assert!(N::to_usize() >= 16, "N must be at least 16 to hold a UUID");
         arr[..16].copy_from_slice(self.as_bytes());
@@ -33,8 +33,8 @@ impl<N: ArrayLength<u8>> AsGenericArray<N> for Uuid {
 }
 
 
-impl<N: ArrayLength<u8>> AsGenericArray<N> for GenericArray<u8, N> {
-    fn as_generic_array(&self) -> GenericArray<u8, N> {
-        self.clone()
+impl<N: ArrayLength<u8>> ToGenericArray<N> for GenericArray<u8, N> {
+    fn to_generic_array(self) -> GenericArray<u8, N> {
+        self
     }
 }

@@ -29,13 +29,13 @@ impl<C: Crypto> KeyStore<C> {
         }
     }
 
-    fn persist_key(&self, key_id: &str, key: Key<C>, tag: &str) -> Result<()> {
+    fn persist_key(&self, key_id: &str, key: &Key<C>, tag: &str) -> Result<()> {
         let (nonce_hashed, key_hashed) = self.serialize_key_pair(key)?;
         self.persist.save_key(key_id, &nonce_hashed, &key_hashed, tag)?;
         Ok(())
     }
 
-    pub fn insert(&mut self, key_id: &str, key: Key<C>) -> Result<()> {
+    pub fn insert(&mut self, key_id: &str, key: &Key<C>) -> Result<()> {
         self.persist_key(key_id, key, "DK")?;
         Ok(())
     }

@@ -8,7 +8,7 @@ use crypto_common::{KeyInit, KeySizeUser};
 
 pub use generic_array::{
     GenericArrayFrom,
-    AsGenericArray
+    ToGenericArray
 };
 
 pub trait Crypto: KeySizeUser + KeyInit + Aead {}

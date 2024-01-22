@@ -11,7 +11,7 @@ use serde::{Serialize, Deserialize};
 
 use base64::prelude::*;
 use uuid::Uuid;
-use crate::common::AsGenericArray;
+use crate::common::ToGenericArray;
 
 const RECOVERY_TAG: &str = "RECOVERY";
 
@@ -42,11 +42,11 @@ impl<C: Crypto> KeyStore<C> {
     pub fn generate_recovery_blob(
         &self,
         key: &Key<C>,
-        nonce: &impl AsGenericArray<<C as AeadCore>::NonceSize>,
+        nonce: impl ToGenericArray<<C as AeadCore>::NonceSize>,
     ) -> Result<String> {
         let (recovery_id, recovery_key) = self.get_recovery_key().ok_or(anyhow!("No recovery key is stored."))?;
         let cipher = C::new(&recovery_key);
-        let nonce = nonce.as_generic_array();
+        let nonce = nonce.to_generic_array();
         let cipher_result = cipher.encrypt(&nonce, key.as_ref())
             .or_else(|_x| bail!("Encryption error"))?;
         let x = Recovery {
@@ -61,7 +61,7 @@ impl<C: Crypto> KeyStore<C> {
         let blob = BASE64_STANDARD.encode(serialized.as_bytes());
         Ok(blob)
     }
-    pub fn set_recover_key(&mut self, id: &str, key: Key<C>) -> Result<()> {
+    pub fn set_recover_key(&mut self, id: &str, key: &Key<C>) -> Result<()> {
         if self.get_recovery_key().is_some() {
             bail!("Cannot update recovery key: Key exist");
         }
@@ -75,9 +75,9 @@ impl<C: Crypto> KeyStore<C> {
         -> Result<GeneratedKey<C>>
     {
         let key = C::generate_key(rng.clone());
-        let nonce = C::generate_nonce(rng.clone());
-        let blob = self.generate_recovery_blob(&key, &nonce)?;
-        self.insert(&key_id.to_string(), key.clone())?;
+        let nonce = C::generate_nonce(rng);
+        let blob = self.generate_recovery_blob(&key, nonce)?;
+        self.insert(&key_id.to_string(), &key)?;
         let res = GeneratedKey {
             key,
             recovery_blob: blob,
